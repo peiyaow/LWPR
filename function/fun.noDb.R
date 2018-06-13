@@ -238,6 +238,7 @@ cv.SlPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){
   return(list(Di = Di.selected, lambda = lam.selected))
 }
 
+# main function include determining whether to include RF
 cv.bothPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){ 
   # set.seed(1011)
   flds = createFolds(label, k = nfolds, list = TRUE, returnTrain = FALSE)

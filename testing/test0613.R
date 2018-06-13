@@ -66,7 +66,7 @@ p_dc = 200
 dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
 X.selected.feature.id = order(dc.vec, decreasing = TRUE)[1:p_dc]
 X.selected.feature.list = lapply(1:2, function(ix) X.plus.inter.list[[ix]][, X.selected.feature.id])
-write.table(X.selected.feature.id, "feature_id.txt", sep="\t")
+write.table(X.selected.feature.id, "feature_id.txt", sep="\t", row.names = F, col.names = F)
 
 # add to the last... probably to fix a random forest bug
 feature.ncol = ncol(X.selected.feature.list[[1]])
@@ -99,58 +99,19 @@ ordin.ml = ordinlog.list$ordin.ml
 sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
 # tuning parameter Di for SlRf
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
+
+write.table(sl.list[[1]], "sl_train.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(sl.list[[2]], "sl_test.txt", sep="\t")
 # ------------------------------------------------------------------------
 
 
 
-# -----------------------------without interaction term--------------------------------- #
-par.list = cv.bothPen.noDb(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
 
-Di.selected = par.list$Di
-lambda.selected = par.list$lambda
-id.which = par.list$id.which
 
-if(id.which == 1){
-  ml.rf = randomForest(x = X.selected.feature.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
-  wrf.list = rf.weight(ml.rf, X.selected.feature.list[[1]], X.selected.feature.list[[2]])
-  mymethod.res = SlRf.weight.noDb(wrf.list, Y.list[[1]], sl.list[[1]], sl.list[[2]], Di.selected)
-}else{
-  mymethod.res = slnp.noDb(X.selected.feature.list[[1]], Y.list[[1]], sl.list[[1]], X.selected.feature.list[[2]], Y.list[[2]], sl.list[[2]], Di.selected)
-}
 
-Yhat.mymethod = mymethod.res$Yhat
-rwrf.list = mymethod.res$w.list
-pom.list = penalized.origin.method(X.selected.feature.list[[1]], Y.list[[1]], X.selected.feature.list[[2]], rwrf.list, lambda.selected, alpha)
-Yhat.mymethodPen = pom.list$Yhat
-# -------------------------------------------------------------------------------------- #
 
-# ---------------mae and corr---------------- #
-mae.mymethod = mean(abs(Yhat.mymethod - Y.list[[2]]))
-corr.mymethod = cor(Yhat.mymethod, Y.list[[2]])
-mae.mymethodPen = mean(abs(Yhat.mymethodPen - Y.list[[2]]))
-corr.mymethodPen = cor(Yhat.mymethodPen, Y.list[[2]])
-# 
-# mae.class.mymethod = sapply(levels(label.list[[2]]), function(ix) mean(abs(Y.list[[2]][label.list[[2]]==ix]-Yhat.mymethod[label.list[[2]]==ix])))
-# corr.class.mymethod = sapply(levels(label.list[[2]]), function(ix) cor(Yhat.mymethod[label.list[[2]]==ix], Y.list[[2]][label.list[[2]]==ix]))
-# mae.class.mymethodPen = sapply(levels(label.list[[2]]), function(ix) mean(abs(Y.list[[2]][label.list[[2]]==ix]-Yhat.mymethodPen[label.list[[2]]==ix])))
-# corr.class.mymethodPen = sapply(levels(label.list[[2]]), function(ix) cor(Yhat.mymethodPen[label.list[[2]]==ix], Y.list[[2]][label.list[[2]]==ix]))
-# 
-# method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "id.which")
 
-# 
-# file.name = c("ADNI1+t=", as.character(t), "+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha),".csv") 
-# file.name = paste(file.name, collapse ="")
-# 
-# write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 6), F, method.names), row.names = F)
-# 
 
-method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which")
-file.name = c("ADNI1+t=", as.character(t), "+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha),".csv")
-file.name = paste(file.name, collapse ="")
-write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
 
-# file1.name = c("ADNI1+class+t=", as.character(t), "+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha),".csv") 
-# file1.name = paste(file1.name, collapse ="")
-# 
-# write.table(t(c(mae.class.mymethod, mae.class.mymethodPen, corr.class.mymethod, corr.class.mymethodPen)[c(c(1,4), c(1,4)+1, c(1,4)+2, c(7,10), c(7,10)+1, c(7,10)+2)]), file = file1.name, sep = ',', append = T, col.names = F, row.names = F)
-# 
+
+

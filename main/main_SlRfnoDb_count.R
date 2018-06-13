@@ -1,6 +1,5 @@
-# --------------- kill devil reading shell command ---------------- #
+# --------------- reading shell command ---------------- #
 args = (commandArgs(TRUE))
-# cat(args, "\n")
 for (i in 1:length(args)) {
   eval(parse(text = args[[i]]))
 }
@@ -11,7 +10,7 @@ library(methods) # "is function issue by Rscript"
 library(glmnet)
 library(randomForest)
 
-# load data...
+# load data
 source("/netscr/peiyao/np/XipmedY3T/loaddataXipmedY3T.R")
 source("/netscr/peiyao/np/fun.rfguided.R")
 source("/netscr/peiyao/np/fun.noDb.R")

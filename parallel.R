@@ -3,7 +3,7 @@ nsim = 50
 # myseeds = floor(1e4 * runif(nsim))
 # save(myseeds, file = "myseed1.RData")
 # load("/netscr/peiyao/np/myseed1.RData")
-load("/netscr/jialu/myseed1.RData")
+load("/netscr/peiyao/myseed1.RData")
 
 for (i in 1:nsim){
    for (a in c(0, 0.5, 1)){
