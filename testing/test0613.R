@@ -10,6 +10,7 @@ library(caret)
 library(methods) # "is function issue by Rscript"
 library(glmnet)
 library(randomForest)
+library(energy)
 
 # load data
 source("/nas/longleaf/home/peiyao/LWPR/main/loaddataXipmedY3T.R")
@@ -38,6 +39,7 @@ X1.sd = apply(X.list[[1]], 2, sd)
 X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
 X.list[[1]] = t(apply(X.list[[1]], 1, function(x) (x - X1.mean)/X1.sd))
 X.list[[2]] = t(apply(X.list[[2]], 1, function(x) (x - X1.mean)/X1.sd))
+print("Finish scaling features")
 # -------------------------------------------------------------------------------
 
 # ----------------------------- Calculating interaction term ------------------------------
@@ -58,15 +60,17 @@ for (m in 1:2){
   X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
 }
 
-# computing distance correlation to select favorite number of features including interaction features 
-library(energy)
+# --- computing distance correlation to select favorite number of features including interaction features --- 
 # number of features to be selected
 p_dc = 200 
-
 dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
+print("Finish calculation distance correlation")
+
 X.selected.feature.id = order(dc.vec, decreasing = TRUE)[1:p_dc]
 X.selected.feature.list = lapply(1:2, function(ix) X.plus.inter.list[[ix]][, X.selected.feature.id])
 write.table(X.selected.feature.id, "feature_id.txt", sep="\t", row.names = F, col.names = F)
+print("Finish addig top interaction terms into design matrix")
+# -----------------------------------------------------------------------------------------------------------
 
 # add to the last... probably to fix a random forest bug
 feature.ncol = ncol(X.selected.feature.list[[1]])
@@ -102,5 +106,10 @@ Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
 
 write.table(sl.list[[1]], "sl_train.txt", sep="\t", append = T, row.names = F, col.names = F)
 write.table(sl.list[[2]], "sl_test.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(Y.list[[1]], "Y_train.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(Y.list[[2]], "Y_test.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(label.list[[1]], "label_train.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(label.list[[2]], "label_test.txt", sep="\t", append = T, row.names = F, col.names = F)
+print("Finish ordinal logistic regression")
 # ------------------------------------------------------------------------
 

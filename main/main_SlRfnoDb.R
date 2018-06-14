@@ -10,6 +10,7 @@ library(caret)
 library(methods) # "is function issue by Rscript"
 library(glmnet)
 library(randomForest)
+library(energy)
 
 # load data
 source("/nas/longleaf/home/peiyao/LWPR/main/loaddataXipmedY3T.R")
@@ -38,6 +39,7 @@ X1.sd = apply(X.list[[1]], 2, sd)
 X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
 X.list[[1]] = t(apply(X.list[[1]], 1, function(x) (x - X1.mean)/X1.sd))
 X.list[[2]] = t(apply(X.list[[2]], 1, function(x) (x - X1.mean)/X1.sd))
+print("Finish scaling features")
 # -------------------------------------------------------------------------------
 
 # ----------------------------- Calculating interaction term ------------------------------
@@ -58,15 +60,17 @@ for (m in 1:2){
   X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
 }
 
-# computing distance correlation to select favorite number of features including interaction features 
-library(energy)
+# --- computing distance correlation to select favorite number of features including interaction features --- 
 # number of features to be selected
 p_dc = 200 
-
 dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
+print("Finish calculation distance correlation")
+
 X.selected.feature.id = order(dc.vec, decreasing = TRUE)[1:p_dc]
 X.selected.feature.list = lapply(1:2, function(ix) X.plus.inter.list[[ix]][, X.selected.feature.id])
-write.table(X.selected.feature.id, "feature_id.txt", sep="\t")
+write.table(X.selected.feature.id, "feature_id.txt", sep="\t", row.names = F, col.names = F)
+print("Finish addig top interaction terms into design matrix")
+# -----------------------------------------------------------------------------------------------------------
 
 # add to the last... probably to fix a random forest bug
 feature.ncol = ncol(X.selected.feature.list[[1]])
@@ -77,7 +81,6 @@ colnames(X.selected.feature.list[[2]]) = as.character(seq(1, feature.ncol))
 # ----------------------------------------- main -------------------------------------------
 # ------------- parameters --------------
 nfolds.log = 5 # ordinal logistic: Sl
-nfolds.np = 5 # SlRf
 nfolds.llr = 5 # local linear regression
 
 alpha0 = 0
@@ -99,16 +102,23 @@ ordin.ml = ordinlog.list$ordin.ml
 sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
 # tuning parameter Di for SlRf
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
+
+write.table(sl.list[[1]], "sl_train.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(sl.list[[2]], "sl_test.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(Y.list[[1]], "Y_train.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(Y.list[[2]], "Y_test.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(label.list[[1]], "label_train.txt", sep="\t", append = T, row.names = F, col.names = F)
+write.table(label.list[[2]], "label_test.txt", sep="\t", append = T, row.names = F, col.names = F)
+print("Finish ordinal logistic regression")
 # ------------------------------------------------------------------------
 
-
-
-# -----------------------------without interaction term--------------------------------- #
+# ----------------------------- SlRf LWPR --------------------------------- 
 par.list = cv.bothPen.noDb(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
 
 Di.selected = par.list$Di
 lambda.selected = par.list$lambda
 id.which = par.list$id.which
+print("Finish SlRf cross validation")
 
 if(id.which == 1){
   ml.rf = randomForest(x = X.selected.feature.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
@@ -117,19 +127,32 @@ if(id.which == 1){
 }else{
   mymethod.res = slnp.noDb(X.selected.feature.list[[1]], Y.list[[1]], sl.list[[1]], X.selected.feature.list[[2]], Y.list[[2]], sl.list[[2]], Di.selected)
 }
+print("Finish local fitting without penalization")
 
 Yhat.mymethod = mymethod.res$Yhat
 rwrf.list = mymethod.res$w.list
 pom.list = penalized.origin.method(X.selected.feature.list[[1]], Y.list[[1]], X.selected.feature.list[[2]], rwrf.list, lambda.selected, alpha)
 Yhat.mymethodPen = pom.list$Yhat
-# -------------------------------------------------------------------------------------- #
+print("Finish local fitting with penalization")
+# --------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------
 
-# ---------------mae and corr---------------- #
+# ------------------------------ Caculating results ----------------------------------------
+# -------------------- mae and corr --------------------------
 mae.mymethod = mean(abs(Yhat.mymethod - Y.list[[2]]))
 corr.mymethod = cor(Yhat.mymethod, Y.list[[2]])
 mae.mymethodPen = mean(abs(Yhat.mymethodPen - Y.list[[2]]))
 corr.mymethodPen = cor(Yhat.mymethodPen, Y.list[[2]])
-# 
+# ------------------------------------------------------------
+
+method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which")
+file.name = c("ADNI1+t=", as.character(t), "+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha),".csv")
+file.name = paste(file.name, collapse ="")
+write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
+print("Finish all")
+# -------------------------------------------------------------------------------------------
+
+
 # mae.class.mymethod = sapply(levels(label.list[[2]]), function(ix) mean(abs(Y.list[[2]][label.list[[2]]==ix]-Yhat.mymethod[label.list[[2]]==ix])))
 # corr.class.mymethod = sapply(levels(label.list[[2]]), function(ix) cor(Yhat.mymethod[label.list[[2]]==ix], Y.list[[2]][label.list[[2]]==ix]))
 # mae.class.mymethodPen = sapply(levels(label.list[[2]]), function(ix) mean(abs(Y.list[[2]][label.list[[2]]==ix]-Yhat.mymethodPen[label.list[[2]]==ix])))
@@ -142,12 +165,6 @@ corr.mymethodPen = cor(Yhat.mymethodPen, Y.list[[2]])
 # file.name = paste(file.name, collapse ="")
 # 
 # write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 6), F, method.names), row.names = F)
-# 
-
-method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which")
-file.name = c("ADNI1+t=", as.character(t), "+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha),".csv")
-file.name = paste(file.name, collapse ="")
-write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
 
 # file1.name = c("ADNI1+class+t=", as.character(t), "+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha),".csv") 
 # file1.name = paste(file1.name, collapse ="")
