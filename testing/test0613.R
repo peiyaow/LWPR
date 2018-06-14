@@ -101,17 +101,6 @@ sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
 
 write.table(sl.list[[1]], "sl_train.txt", sep="\t", append = T, row.names = F, col.names = F)
-write.table(sl.list[[2]], "sl_test.txt", sep="\t")
+write.table(sl.list[[2]], "sl_test.txt", sep="\t", append = T, row.names = F, col.names = F)
 # ------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
 
