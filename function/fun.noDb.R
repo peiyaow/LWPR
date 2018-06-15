@@ -295,27 +295,27 @@ cv.bothPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){
   min.id.Di = (min.id - 1)%%lDi + 1
   min.id.lam = ceiling(min.id/lDi)
   
-  # -----new 1se----- #
-  min.1se = sd.mtx[min.id.Di, min.id.lam]
-  TF.mtx = measure.mtx < (min(measure.mtx)+min.1se) # indicator of whether the measure is within 1se
-  # search the largest lambda within the measure.mtx+1se
-  flag = 0
-  i_lam = 0
-  while (flag == 0){
-    i_lam = i_lam + 1
-    if (sum(TF.mtx[,i_lam])!=0){
-      flag = i_lam
-    }
-  }
-  # ----------------- #
+  # # -----new 1se----- 
+  # min.1se = sd.mtx[min.id.Di, min.id.lam]
+  # TF.mtx = measure.mtx < (min(measure.mtx)+min.1se) # indicator of whether the measure is within 1se
+  # # search the largest lambda within the measure.mtx+1se
+  # flag = 0
+  # i_lam = 0
+  # while (flag == 0){
+  #   i_lam = i_lam + 1
+  #   if (sum(TF.mtx[,i_lam])!=0){
+  #     flag = i_lam
+  #   }
+  # }
+  # # ----------------- 
   
   # min
-  # Di.selected = Di.vec[min.id.Di]
-  # lam.selected = lambda.vec[min.id.lam]
+  Di.selected = Di.vec[min.id.Di]
+  lam.selected = lambda.vec[min.id.lam]
   
   # 1se
-  lam.selected = lambda.vec[flag]
-  Di.selected = Di.vec[which.min(measure.mtx[,flag])]
+  # lam.selected = lambda.vec[flag]
+  # Di.selected = Di.vec[which.min(measure.mtx[,flag])]
   
   return(list(Di = Di.selected, lambda = lam.selected, id.which = id.which))
 }

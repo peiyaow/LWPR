@@ -27,6 +27,7 @@ set.seed(myseed)
 idtrain = unlist(createDataPartition(label, times = 1, p = 3/4))
 idtest = (1:n)[-idtrain]
 
+Y = log(Y+1)
 id = list(idtrain, idtest)
 Y.list = lapply(1:2, function(x) Y[id[[x]]]) # train,test
 X.list = lapply(1:2, function(x) X[id[[x]],]) 
@@ -142,10 +143,13 @@ print("Finish local fitting with penalization")
 
 # ------------------------------ Caculating results ----------------------------------------
 # -------------------- mae and corr --------------------------
-mae.mymethod = mean(abs(Yhat.mymethod - Y.list[[2]]))
-corr.mymethod = cor(Yhat.mymethod, Y.list[[2]])
-mae.mymethodPen = mean(abs(Yhat.mymethodPen - Y.list[[2]]))
-corr.mymethodPen = cor(Yhat.mymethodPen, Y.list[[2]])
+Yhat.mymethod = exp(Yhat.mymethod)
+Yhat.mymethodPen = exp(Yhat.mymethodPen)
+
+mae.mymethod = mean(abs(Yhat.mymethod - exp(Y.list[[2]])))
+corr.mymethod = cor(Yhat.mymethod, exp(Y.list[[2]]))
+mae.mymethodPen = mean(abs(Yhat.mymethodPen - exp(Y.list[[2]])))
+corr.mymethodPen = cor(Yhat.mymethodPen, exp(Y.list[[2]]))
 # ------------------------------------------------------------
 
 method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which")
