@@ -223,8 +223,15 @@ penalized.origin.method = function(X.train, Y.train, X.test, wrf.list, lambda.ve
   nlambda = length(lambda.vec)
   
   diff.mtx.list = diff.matrix(X.train, X.test)
+  # beta.array = sapply(1:n.test, function(x) 
+  #   if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=1) {
+  #     matrix(rep(c(mean(Y.train[wrf.list[[x]]!=0]), rep(0, p)), nlambda), ncol = nlambda)}else{
+  #       as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
+  #     }
+  #   , simplify = "array") # (p+1) by nlambda by n.test
+  
   beta.array = sapply(1:n.test, function(x) 
-    if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=1) {
+    if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=10) {
       matrix(rep(c(mean(Y.train[wrf.list[[x]]!=0]), rep(0, p)), nlambda), ncol = nlambda)}else{
         as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
       }

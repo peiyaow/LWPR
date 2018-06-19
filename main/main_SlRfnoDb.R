@@ -149,8 +149,8 @@ corr.mymethodPen = cor(Yhat.mymethodPen, Y.list[[2]])
 # ------------------------------------------------------------
 
 method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which")
-
-write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = paste0("ADNI1+", name.id, ".csv"), sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
+file.name = paste0("ADNI1+", name.id, ".csv")
+write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
 print("Finish all")
 # -------------------------------------------------------------------------------------------
 

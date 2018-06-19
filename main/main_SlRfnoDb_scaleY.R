@@ -102,6 +102,14 @@ if (alpha == 0){
 ordinlog.list = cv.ordinlog.en(label.list[[1]], X.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
 ordin.ml = ordinlog.list$ordin.ml
 sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
+
+# delete outliers
+sl.list = lapply(1:2, function(ix){
+  sl.list[[ix]][sl.list[[ix]] > boxplot(sl.list[[ix]], plot = F)$stats[5,1]] = boxplot(sl.list[[ix]], plot = F)$stats[5,1]
+  sl.list[[ix]][sl.list[[ix]] < boxplot(sl.list[[ix]], plot = F)$stats[1,1]] = boxplot(sl.list[[ix]], plot = F)$stats[1,1]
+  sl.list[[ix]]
+})
+
 # tuning parameter Di for SlRf
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
 
@@ -153,8 +161,8 @@ corr.mymethodPen = cor(Yhat.mymethodPen, exp(Y.list[[2]]))
 # ------------------------------------------------------------
 
 method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which")
-
-write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = paste0("ADNI1+", name.id, ".csv"), sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
+file.name = paste0("ADNI1+", name.id, ".csv")
+write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
 print("Finish all")
 # -------------------------------------------------------------------------------------------
 

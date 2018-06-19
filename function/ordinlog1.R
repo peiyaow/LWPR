@@ -253,6 +253,14 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
       
       Slhat.val.list = lapply(ml.list, function(ml) X.val%*%ml$w)
       
+      # new detect outliers and delete outliers
+      Slhat.extvalues.list = lapply(Slhat.val.list, function(sl) boxplot(sl, plot = F)$stats[c(1,5),1])
+      Slhat.val.list = lapply(1:length(Slhat.val.list), function(ix){
+        Slhat.val.list[[ix]][Slhat.val.list[[ix]] > Slhat.extvalues.list[[ix]][2]] = Slhat.extvalues.list[[ix]][2]
+        Slhat.val.list[[ix]][Slhat.val.list[[ix]] < Slhat.extvalues.list[[ix]][1]] = Slhat.extvalues.list[[ix]][1]
+        Slhat.val.list[[ix]]
+      })
+      
       corr.list[[i]] = as.vector(sapply(Slhat.val.list, function(Slhat) cor(Slhat, Y.val)))
     }
     corr.vec = apply(do.call(rbind, corr.list), 2, mean)
