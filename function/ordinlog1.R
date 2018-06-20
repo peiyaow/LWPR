@@ -1,4 +1,6 @@
 library(caret)
+library(foreach)
+library(doParallel)
 
 mygrad = function(x, label, X, lambda){
   K = length(levels(label))
@@ -249,7 +251,14 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
       label.train = label[unlist(flds[-i])]
       label.val = label[unlist(flds[i])]
       
-      ml.list = apply(as.matrix(lam.vec), 1, function(x) ordin.logistic.en(label.train, X.train, x, alpha, initial.x))
+#      ml.list = apply(as.matrix(lam.vec), 1, function(x) ordin.logistic.en(label.train, X.train, x, alpha, initial.x))
+      
+      cl = makeCluster(2) # number of cores you can use
+      registerDoParallel(cl)
+      ml.list = foreach(lam=lam.vec, .export = c("ordin.logistic.en", "penalike.en", "myphi", "mygrad.en")) %dopar% {
+        ordin.logistic.en(label.train, X.train, lam, alpha, initial.x)
+      }
+      stopCluster(cl)
       
       Slhat.val.list = lapply(ml.list, function(ml) X.val%*%ml$w)
       
