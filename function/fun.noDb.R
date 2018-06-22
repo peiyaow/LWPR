@@ -258,6 +258,7 @@ cv.bothPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){
     sl.val = sl[unlist(flds[k])]
     # set.seed(1010)
     ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100)
+    wrf.list = rf.weight(ml.rf, X.train, X.val)
     mse.Rf.list[[k]] = list()
     mse.noRf.list[[k]] = list()
     for (i in 1:lDi){

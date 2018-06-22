@@ -340,4 +340,66 @@ mysimulation4 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma
   return(list(X = X, Y = Y, signal = signal, label = label, s = s))
 }
 
+mysimulation5 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w){
+  X1 = mvrnorm(n = n, rep(0, p1), Sigma_1)
+  X2 = mvrnorm(n = n, rep(0, p2), Sigma_2)
+  X3 = mvrnorm(n = n, rep(0, p3), Sigma_3)
+  Xc = mvrnorm(n = n, rep(0, pc), Sigma_c)
+  X0 = mvrnorm(n = n, rep(0, p0), Sigma_0)
+  
+  X = cbind(X1, X2, X3, Xc, X0)
+  
+  linpred1 = -4 - X%*%w
+  linpred2 = 4 - X%*%w
+  
+  P1 = exp(linpred1)/(1+exp(linpred1))
+  P12 = exp(linpred2)/(1+exp(linpred2))
+  P.mtx = cbind(P1, P12-P1, 1-P12)
+  label = as.ordered(apply(P.mtx, 1, which.max))
+  # table(label)
+  
+  s = X%*%w
+  o = order(s)
+  # s = s[o] - min(s)
+  
+  X = X[o,]
+  label = label[o]
+  X1 = X1[o,]
+  X2 = X2[o,]
+  X3 = X3[o,]
+  Xc = Xc[o,]
+  X0 = X0[o,]
+  
+  n.class = sapply(1:3, function(id) sum(label==id))
+  
+  mybeta1 = matrix(rep(c(rep(1, n.class[1]), rep(0, n.class[2]+n.class[3])), p1), ncol = p1)
+  mybeta2 = matrix(rep(c(rep(0, n.class[1]), rep(2, n.class[2]), rep(0, n.class[3])), p2), ncol = p2)
+  mybeta3 = matrix(rep(c(rep(0, n.class[1]+n.class[2]), rep(3, n.class[3])), p3), ncol = p3)
+  mybetac = matrix(rep(c(rep(1, n.class[1]), rep(1.5, n.class[2]), rep(2, n.class[3])), pc), ncol = pc)
+  
+  err = mvrnorm(n = n, 0, rho_e)[,1]
+  
+  # signal = s/5 + diag(X1%*%t(mybeta1)) + diag(X2%*%t(mybeta2)) + diag(X3%*%t(mybeta3)) + diag(Xc%*%t(mybetac))
+  signal = diag(X1%*%t(mybeta1)) + diag(X2%*%t(mybeta2)) + diag(X3%*%t(mybeta3)) + diag(Xc%*%t(mybetac))
+  
+  Y = signal + err
+  
+  # choose some label and assign another label to it
+  percent = .1
+  ix_change_label = sample(seq(1, length(label)), floor(percent*length(label)))
+  P.mtx = P.mtx[o,]
+  for (ix in ix_change_label){
+    if (label[ix] == 1 | label[ix] == 3){
+#      print(label[ix])
+      label[ix] = 2
+    }else{
+#      print(label[ix])
+      prob1 = P.mtx[ix,1]/sum(P.mtx[ix,c(1,3)])
+#      print(prob1)
+      label[ix] = c(1,3)[rbinom(1, 1, prob1)+1]
+    }
+  }
+  return(list(X = X, Y = Y, signal = signal, label = label, s = s))
+}
+
 
