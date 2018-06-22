@@ -1,5 +1,5 @@
-load("~/Documents/GitHub/LWPR/simulation/parameter/diag_cov/sim_par23.RData")
-setwd("~/Documents/GitHub/LWPR/simulation/result/diag_cov")
+load("~/Documents/GitHub/LWPR/simulation/parameter/non_diag_cov/sim_par33.RData")
+setwd("~/Documents/GitHub/LWPR/simulation/result/non_diag_cov")
 source("~/Documents/GitHub/LWPR/simulation/sim.fun.R")
 
 # myseeds = floor(1e4 * runif(50))
@@ -50,7 +50,7 @@ for (i in 1:50){
   corr.elast = cor(predict(ml.elast, newx = X.test), Y.test)
   
   method.names = c("mae.rf", "mae.lasso", "mae.ridge", "mae.elast", "corr.rf", "corr.lasso", "corr.ridge", "corr.elast")
-  file.name = "simulation_results23.csv"
+  file.name = "simulation_results33.csv"
   write.table(t(c(mae.rf, mae.lasso, mae.ridge, mae.elast, corr.rf, corr.lasso, corr.ridge, corr.elast)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 8), F, method.names), row.names = F)
 }
 
