@@ -1,10 +1,10 @@
-load("~/Documents/R/np/simulation/sim_par33.RData")
-setwd("~/Documents/R/np/simulation/result/")
-source("~/Documents/R/np/simulation/sim.fun.R")
+load("~/Documents/GitHub/LWPR/simulation/parameter/diag_cov/sim_par23.RData")
+setwd("~/Documents/GitHub/LWPR/simulation/result/diag_cov")
+source("~/Documents/GitHub/LWPR/simulation/sim.fun.R")
 
 # myseeds = floor(1e4 * runif(50))
 # save(myseeds, file = "myseed.RData")
-load("~/Documents/R/np/simulation/sim.myseed.RData")
+load("~/Documents/GitHub/LWPR/simulation/sim.myseed.RData")
 library(glmnet)
 library(randomForest)
 library(caret)
@@ -12,15 +12,26 @@ nfolds = 5
 
 for (i in 1:50){
   set.seed(myseeds[i])
+  # data.train = mysimulation4(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w)
+  # data.test = mysimulation4(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w)
+  # X = data.train$X
+  # Y = data.train$Y
+  # label = data.train$label
+  # X.test = data.test$X
+  # Y.test = data.test$Y
+  # label.test = data.test$label
   
-  data.train = mysimulation3(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w)
-  data.test = mysimulation3(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w)
-  X = data.train$X
-  Y = data.train$Y
-  label = data.train$label
-  X.test = data.test$X
-  Y.test = data.test$Y
-  label.test = data.test$label
+  data.list = lapply(1:2, function(ix) mysimulation4(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w))
+  X.list = lapply(1:2, function(ix) data.list[[ix]]$X)
+  Y.list = lapply(1:2, function(ix) data.list[[ix]]$Y)
+  label.list = lapply(1:2, function(ix) data.list[[ix]]$label)
+  
+  X = X.list[[1]]
+  Y = Y.list[[1]]
+  label = label.list[[1]]
+  X.test = X.list[[2]]
+  Y.test = Y.list[[2]]
+  label.test = label.list[[2]]
   
   ml.rf = randomForest(x = X, y = Y)
   flds = createFolds(label, k = nfolds, list = FALSE, returnTrain = FALSE)
@@ -39,7 +50,7 @@ for (i in 1:50){
   corr.elast = cor(predict(ml.elast, newx = X.test), Y.test)
   
   method.names = c("mae.rf", "mae.lasso", "mae.ridge", "mae.elast", "corr.rf", "corr.lasso", "corr.ridge", "corr.elast")
-  file.name = "simulationresults33.csv"
+  file.name = "simulation_results23.csv"
   write.table(t(c(mae.rf, mae.lasso, mae.ridge, mae.elast, corr.rf, corr.lasso, corr.ridge, corr.elast)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 8), F, method.names), row.names = F)
 }
 

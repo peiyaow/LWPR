@@ -111,7 +111,7 @@ rf.weight = function(ml.rf, X.train, X.test){
     
     ntrees = dim(nodes.train)[2]
     n.test = dim(nodes.test)[1]
-    # n.train = dim(nodes.train)[1]
+    n.train = dim(nodes.train)[1]
     
     w.list = list()
     k.list = list()
@@ -129,7 +129,15 @@ rf.weight = function(ml.rf, X.train, X.test){
       # 8.8 consider bootrap sampling
       k.list[[i]] = apply(wtimesn, 2, sum)
       # length n.test; each element 1 by ntrees
-      woverk = sapply(1:ntrees, function(x) wtimesn[,x]/k.list[[i]][x])
+#      woverk = sapply(1:ntrees, function(x) wtimesn[,x]/k.list[[i]][x])
+      woverk = sapply(1:ntrees, function(x) {
+        if(k.list[[i]][x]){
+          wtimesn[,x]/k.list[[i]][x]
+        }else{
+          rep(0, n.train)
+        }
+      })
+      
       # n.train by ntrees
       
       wrf.list[[i]] = apply(woverk, 1, sum)/ntrees

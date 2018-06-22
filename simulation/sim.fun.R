@@ -314,7 +314,7 @@ mysimulation4 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma
   
   s = X%*%w
   o = order(s)
-  s = s[o] - min(s)
+  # s = s[o] - min(s)
   
   X = X[o,]
   label = label[o]
@@ -332,12 +332,11 @@ mysimulation4 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma
   mybetac = matrix(rep(c(rep(1, n.class[1]), rep(1.5, n.class[2]), rep(2, n.class[3])), pc), ncol = pc)
   
   err = mvrnorm(n = n, 0, rho_e)[,1]
-  # ipt = c(rep(2, table(label)[1]), rep(3, table(label)[2]), rep(4, table(label)[3]))
-  signal = s/5 + diag(X1%*%t(mybeta1)) + diag(X2%*%t(mybeta2)) + diag(X3%*%t(mybeta3)) + diag(Xc%*%t(mybetac))
+  
+  # signal = s/5 + diag(X1%*%t(mybeta1)) + diag(X2%*%t(mybeta2)) + diag(X3%*%t(mybeta3)) + diag(Xc%*%t(mybetac))
+  signal = diag(X1%*%t(mybeta1)) + diag(X2%*%t(mybeta2)) + diag(X3%*%t(mybeta3)) + diag(Xc%*%t(mybetac))
   
   Y = signal + err
-  # plot(signal)
-  # plot(Y)
   return(list(X = X, Y = Y, signal = signal, label = label, s = s))
 }
 

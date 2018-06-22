@@ -11,6 +11,8 @@ library(methods) # "is function issue by Rscript"
 library(energy)
 library(glmnet)
 library(randomForest)
+library(foreach)
+library(doParallel)
 
 # load data
 source("/nas/longleaf/home/peiyao/LWPR/main/loaddataXipmedY3T.R")
@@ -59,13 +61,29 @@ for (m in 1:2){
     }
   }
   X.interaction.list[[m]] = do.call(cbind, X.interaction.list[[m]])
-  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
+#  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
 }
+X1.interaction.mean = apply(X.interaction.list[[1]], 2, mean)
+X1.interaction.sd = apply(X.interaction.list[[1]], 2, sd)
+# if the std is really small just subtract the mean in the following step 
+X1.interaction.sd = sapply(X1.interaction.sd, function(x) ifelse(x<1e-5, 1, x)) 
+X.interaction.list[[1]] = t(apply(X.interaction.list[[1]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
+X.interaction.list[[2]] = t(apply(X.interaction.list[[2]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
+X.plus.inter.list = lapply(1:2, function(x) cbind(X.list[[x]], X.interaction.list[[x]]))
+
 
 # --- computing distance correlation to select favorite number of features including interaction features --- 
 # number of features to be selected
 p_dc = 200 
-dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
+
+cl = makeCluster(4) # number of cores you can use
+registerDoParallel(cl)
+
+dc.vec = foreach(col_ix = 1:ncol(X.plus.inter.list[[1]]), .packages = "energy", .combine = "c") %dopar% {
+  dcor(Y.list[[1]], X.plus.inter.list[[1]][,col_ix])
+}
+stopCluster(cl)
+# dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
 print("Finish calculation distance correlation")
 
 X.selected.feature.id = order(dc.vec, decreasing = TRUE)[1:p_dc]

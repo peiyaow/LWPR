@@ -243,6 +243,10 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
     return(list(measure.vec = mse.vec, measure.type = measure.type, lam = lam.min, ordin.ml= ordin.ml.best, Sl_on_prob_coef = Sl_on_prob_coef.best))
   } else if (measure.type == "corr"){
     corr.list = list()
+    
+    cl = makeCluster(4) # number of cores you can use
+    registerDoParallel(cl)
+    
     for (i in 1:nfolds){
       X.train = X[unlist(flds[-i]), ]
       X.val = X[unlist(flds[i]), ]
@@ -252,13 +256,10 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
       label.val = label[unlist(flds[i])]
       
 #      ml.list = apply(as.matrix(lam.vec), 1, function(x) ordin.logistic.en(label.train, X.train, x, alpha, initial.x))
-      
-      cl = makeCluster(2) # number of cores you can use
-      registerDoParallel(cl)
+    
       ml.list = foreach(lam=lam.vec, .export = c("ordin.logistic.en", "penalike.en", "myphi", "mygrad.en")) %dopar% {
         ordin.logistic.en(label.train, X.train, lam, alpha, initial.x)
       }
-      stopCluster(cl)
       
       Slhat.val.list = lapply(ml.list, function(ml) X.val%*%ml$w)
       
@@ -272,6 +273,7 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
       
       corr.list[[i]] = as.vector(sapply(Slhat.val.list, function(Slhat) cor(Slhat, Y.val)))
     }
+    stopCluster(cl)
     corr.vec = apply(do.call(rbind, corr.list), 2, mean)
     
     lam.max = lam.vec[which.min(abs(abs(corr.vec)-1))]
