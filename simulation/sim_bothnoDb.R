@@ -2,6 +2,7 @@
 args = (commandArgs(TRUE))
 # cat(args, "\n")
 for (i in 1:length(args)) {
+  print(i)
   eval(parse(text = args[[i]]))
 }
 # ------------------------------------------------------------------ #
@@ -11,14 +12,14 @@ library(methods) # "is function issue by Rscript"
 library(glmnet)
 library(randomForest)
 
-load("/nas/longleaf/home/peiyao/LWPR/simulation/parameter/diag_cov/sim_par21.RData")
+load("/nas/longleaf/home/peiyao/LWPR/simulation/parameter/diag_cov/sim_par22.RData")
 source("/nas/longleaf/home/peiyao/LWPR/function/fun.rfguided.R")
 source("/nas/longleaf/home/peiyao/LWPR/function/fun.noDb.R")
 source("/nas/longleaf/home/peiyao/LWPR/function/ordinlog1.R")
 source("/nas/longleaf/home/peiyao/LWPR/simulation/sim.fun.R")
 
 set.seed(myseed)
-data.list = lapply(1:2, function(ix) mysimulation4(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w))
+data.list = lapply(1:2, function(ix) mysimulation5(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w))
 
 X.list = lapply(1:2, function(ix) data.list[[ix]]$X)
 Y.list = lapply(1:2, function(ix) data.list[[ix]]$Y)
