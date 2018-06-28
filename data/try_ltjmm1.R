@@ -5,11 +5,11 @@ library(caret)
 library(doParallel)
 library(energy)
 
-setwd("/Users/MonicaW/Documents/GitHub/LWPR/data")
-setwd("C:/Users/peiyao/Documents/GitHub/LWPR/data")
-X0 = as.matrix(read_table("X1a.txt", col_names = F))
-Y0 = as.matrix(read_table("Y5T.txt", col_names = F))[, 4+5*(c(1,2,3)-1)]
-label0 = as.ordered(read_table("label1.txt", col_names = F)$X1)
+#setwd("/Users/MonicaW/Documents/GitHub/LWPR/data")
+#setwd("C:/Users/peiyao/Documents/GitHub/LWPR/data")
+X0 = as.matrix(read_table("/nas/longleaf/home/peiyao/LWPR/data/X1a.txt", col_names = F))
+Y0 = as.matrix(read_table("/nas/longleaf/home/peiyao/LWPR/data/Y5T.txt", col_names = F))[, 4+5*(c(1,2,3)-1)]
+label0 = as.ordered(read_table("/nas/longleaf/home/peiyao/LWPR/data/label1.txt", col_names = F)$X1)
 
 # change negatives to na in Y
 Y0 = apply(Y0, 2, function(x) {x[x<0] = NA 
@@ -95,28 +95,12 @@ dd = right_join(id_X, id_year_Y_outcome, by = 'id')
 # fit ltjmm
 setup <- ltjmm(Y ~ year | .-Y-outcome-year-id | id | outcome, data = dd[dd$id %in% idtrain,])
 fit <- stan(file = file.path(.libPaths()[1], "ltjmm", "stan", "ltjmm.stan"),
-            seed = rng_seed,
             data = setup$data,
             pars = c('beta', 'delta', 'alpha0', 'alpha1', 'gamma',
                      'sigma_alpha0', 'sigma_alpha1', "sigma_delta", 'sigma_y', 'log_lik'),
             open_progress = FALSE, chains = 2, iter = 2000,
-            warmup = 1000, thin = 1, cores = 2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            warmup = 1000, thin = 1, cores = 4)
+save.image("try_ltjmm.RData")
 
 
 
