@@ -23,9 +23,7 @@ for (i in 1:nrow(Xs)){
   Xs[i, Xs.missing[i, ]] = ip.med[Xs.missing[i, ]]
 }
 
-
-
-id = sample(805,200)
+id = sample(804,200)
 X = Xs[id,]
 Y = Y0[id,]
 n = nrow(X)
@@ -51,6 +49,25 @@ fit <- stan(file = file.path(.libPaths()[1], "ltjmm", "stan", "ltjmm.stan"),
             open_progress = FALSE, chains = 2, iter = 2000,
             warmup = 1000, thin = 1, cores = 2)
 
+
+
+id_test = setdiff(seq(1,804), id)
+X_test = Xs[id_test,]
+Y_test = Y0[id_test,]
+n_test = nrow(X_test)
+
+result = predict.ltjmm(setup, fit, newdata = dd_test)
+
+
+
+
+
+
+
+
+
+
+predict(setup, fit, newdata = dd_test)
 
 
 
