@@ -1,3 +1,11 @@
+# ---------------------- reading shell command --------------------- 
+args = (commandArgs(TRUE))
+# cat(args, "\n")
+for (i in 1:length(args)) {
+  eval(parse(text = args[[i]]))
+}
+# ------------------------------------------------------------------ 
+
 library(dplyr)
 library(readr)
 library(ltjmm)
@@ -10,6 +18,8 @@ library(energy)
 X0 = as.matrix(read_table("/nas/longleaf/home/peiyao/LWPR/data/X1a.txt", col_names = F))
 Y0 = as.matrix(read_table("/nas/longleaf/home/peiyao/LWPR/data/Y5T.txt", col_names = F))[, 4+5*(c(1,2,3)-1)]
 label0 = as.ordered(read_table("/nas/longleaf/home/peiyao/LWPR/data/label1.txt", col_names = F)$X1)
+
+#load("data.RData")
 
 # change negatives to na in Y
 Y0 = apply(Y0, 2, function(x) {x[x<0] = NA 
@@ -79,6 +89,13 @@ X.selected.feature = X.plus.inter[, X.selected.feature.id]
 feature.ncol = ncol(X.selected.feature)
 colnames(X.selected.feature) = as.character(seq(1, feature.ncol))
 
+X.selected.feature.pca = prcomp(X.selected.feature)
+X.selected.feature.pr_var = X.selected.feature.pca$sdev^2
+X.selected.feature.prop_varex <- X.selected.feature.pr_var/sum(X.selected.feature.pr_var)
+X.selected.feature.prop.explained = cumsum(X.selected.feature.prop_varex)
+pc.num = seq(1,200)[X.selected.feature.prop.explained>.95][1]
+X.selected.pc = X.selected.feature.pca$x[,1:pc.num]
+
 id_year_Y.list = list()
 for (i in 1:n){
   Y.tmp = Y0[i,][!is.na(Y0[i,])]
@@ -87,7 +104,7 @@ for (i in 1:n){
 }
 id_year_Y = as.data.frame(do.call(rbind, id_year_Y.list))
 id_year_Y_outcome = data.frame(id_year_Y, outcome = 1)
-id_X = as.data.frame(cbind(id = id_all, X.selected.feature))
+id_X = as.data.frame(cbind(id = id_all, X.selected.pc))
 
 dd = right_join(id_X, id_year_Y_outcome, by = 'id')
 
@@ -99,8 +116,8 @@ fit <- stan(file = file.path(.libPaths()[1], "ltjmm", "stan", "ltjmm.stan"),
             pars = c('beta', 'delta', 'alpha0', 'alpha1', 'gamma',
                      'sigma_alpha0', 'sigma_alpha1', "sigma_delta", 'sigma_y', 'log_lik'),
             open_progress = FALSE, chains = 2, iter = 2000,
-            warmup = 1000, thin = 1, cores = 4)
-save.image("try_ltjmm.RData")
+            warmup = 1000, thin = 1, cores = 4, control = list(max_treedepth = 15))
+save.image("ltjmm_PCA.RData")
 
 
 
