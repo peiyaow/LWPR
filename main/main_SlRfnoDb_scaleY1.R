@@ -61,8 +61,14 @@ for (m in 1:2){
     }
   }
   X.interaction.list[[m]] = do.call(cbind, X.interaction.list[[m]])
+<<<<<<< HEAD
 #  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
 }
+=======
+  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
+}
+
+>>>>>>> 9b750fb0fb03e81cf7eacbb1a7fb8f6a91c03873
 X1.interaction.mean = apply(X.interaction.list[[1]], 2, mean)
 X1.interaction.sd = apply(X.interaction.list[[1]], 2, sd)
 # if the std is really small just subtract the mean in the following step 
@@ -83,7 +89,11 @@ dc.vec = foreach(col_ix = 1:ncol(X.plus.inter.list[[1]]), .packages = "energy", 
   dcor(Y.list[[1]], X.plus.inter.list[[1]][,col_ix])
 }
 stopCluster(cl)
+<<<<<<< HEAD
 # dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
+=======
+
+>>>>>>> 9b750fb0fb03e81cf7eacbb1a7fb8f6a91c03873
 print("Finish calculation distance correlation")
 
 X.selected.feature.id = order(dc.vec, decreasing = TRUE)[1:p_dc]

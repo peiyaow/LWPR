@@ -1,3 +1,5 @@
+# use distance correlation selected feature for ordinal logistic
+
 # ---------------------- reading shell command --------------------- 
 args = (commandArgs(TRUE))
 # cat(args, "\n")
@@ -11,6 +13,8 @@ library(methods) # "is function issue by Rscript"
 library(energy)
 library(glmnet)
 library(randomForest)
+library(foreach)
+library(doParallel)
 
 # load data
 source("/nas/longleaf/home/peiyao/LWPR/main/loaddataXipmedY3T.R")
@@ -59,13 +63,29 @@ for (m in 1:2){
     }
   }
   X.interaction.list[[m]] = do.call(cbind, X.interaction.list[[m]])
-  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
+  #  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
 }
+X1.interaction.mean = apply(X.interaction.list[[1]], 2, mean)
+X1.interaction.sd = apply(X.interaction.list[[1]], 2, sd)
+# if the std is really small just subtract the mean in the following step 
+X1.interaction.sd = sapply(X1.interaction.sd, function(x) ifelse(x<1e-5, 1, x)) 
+X.interaction.list[[1]] = t(apply(X.interaction.list[[1]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
+X.interaction.list[[2]] = t(apply(X.interaction.list[[2]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
+X.plus.inter.list = lapply(1:2, function(x) cbind(X.list[[x]], X.interaction.list[[x]]))
+
 
 # --- computing distance correlation to select favorite number of features including interaction features --- 
 # number of features to be selected
 p_dc = 200 
-dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
+
+cl = makeCluster(4) # number of cores you can use
+registerDoParallel(cl)
+
+dc.vec = foreach(col_ix = 1:ncol(X.plus.inter.list[[1]]), .packages = "energy", .combine = "c") %dopar% {
+  dcor(Y.list[[1]], X.plus.inter.list[[1]][,col_ix])
+}
+stopCluster(cl)
+# dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
 print("Finish calculation distance correlation")
 
 X.selected.feature.id = order(dc.vec, decreasing = TRUE)[1:p_dc]
@@ -88,7 +108,7 @@ nfolds.llr = 5 # local linear regression
 alpha0 = 0
 gamma.vec = exp(rev(seq(-2, 7, length.out = 50)))
 # initial point for optimization, first K-1 parameters are thetas, then the first coming p are coefficients the last p are slack variable
-initial.x = c(seq(-2, 2, length.out = length(levels(label.list[[1]]))-1), rep(0,p), rep(1,p))
+initial.x = c(seq(-2, 2, length.out = length(levels(label.list[[1]]))-1), rep(0,p_dc), rep(1,p_dc))
 
 measure.type = "corr"
 if (alpha == 0){
@@ -99,10 +119,9 @@ if (alpha == 0){
 # ----------------------------------------
 
 # ------------------------ ordinal logistic: Sl --------------------------
-ordinlog.list = cv.ordinlog.en(label.list[[1]], X.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
+ordinlog.list = cv.ordinlog.en(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
 ordin.ml = ordinlog.list$ordin.ml
-sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
-<<<<<<< HEAD
+sl.list = lapply(1:2, function(x) as.vector(X.selected.feature.list[[x]]%*%ordin.ml$w))
 
 # delete outliers
 sl.list = lapply(1:2, function(ix){
@@ -111,8 +130,6 @@ sl.list = lapply(1:2, function(ix){
   sl.list[[ix]]
 })
 
-=======
->>>>>>> 9b750fb0fb03e81cf7eacbb1a7fb8f6a91c03873
 # tuning parameter Di for SlRf
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
 
@@ -163,9 +180,9 @@ mae.mymethodPen = mean(abs(Yhat.mymethodPen - exp(Y.list[[2]])))
 corr.mymethodPen = cor(Yhat.mymethodPen, exp(Y.list[[2]]))
 # ------------------------------------------------------------
 
-method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which")
+method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda", "id.which", "seed")
 file.name = paste0("ADNI1+", name.id, ".csv")
-write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
+write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lambda.selected, id.which, myseed)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 8), F, method.names), row.names = F)
 print("Finish all")
 # -------------------------------------------------------------------------------------------
 
