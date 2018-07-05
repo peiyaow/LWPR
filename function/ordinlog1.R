@@ -1,4 +1,6 @@
 library(caret)
+library(foreach)
+library(doParallel)
 
 mygrad = function(x, label, X, lambda){
   K = length(levels(label))
@@ -241,6 +243,10 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
     return(list(measure.vec = mse.vec, measure.type = measure.type, lam = lam.min, ordin.ml= ordin.ml.best, Sl_on_prob_coef = Sl_on_prob_coef.best))
   } else if (measure.type == "corr"){
     corr.list = list()
+    
+    cl = makeCluster(4) # number of cores you can use
+    registerDoParallel(cl)
+    
     for (i in 1:nfolds){
       X.train = X[unlist(flds[-i]), ]
       X.val = X[unlist(flds[i]), ]
@@ -249,12 +255,25 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
       label.train = label[unlist(flds[-i])]
       label.val = label[unlist(flds[i])]
       
-      ml.list = apply(as.matrix(lam.vec), 1, function(x) ordin.logistic.en(label.train, X.train, x, alpha, initial.x))
+#      ml.list = apply(as.matrix(lam.vec), 1, function(x) ordin.logistic.en(label.train, X.train, x, alpha, initial.x))
+    
+      ml.list = foreach(lam=lam.vec, .export = c("ordin.logistic.en", "penalike.en", "myphi", "mygrad.en")) %dopar% {
+        ordin.logistic.en(label.train, X.train, lam, alpha, initial.x)
+      }
       
       Slhat.val.list = lapply(ml.list, function(ml) X.val%*%ml$w)
       
+      # new detect outliers and delete outliers
+      Slhat.extvalues.list = lapply(Slhat.val.list, function(sl) boxplot(sl, plot = F)$stats[c(1,5),1])
+      Slhat.val.list = lapply(1:length(Slhat.val.list), function(ix){
+        Slhat.val.list[[ix]][Slhat.val.list[[ix]] > Slhat.extvalues.list[[ix]][2]] = Slhat.extvalues.list[[ix]][2]
+        Slhat.val.list[[ix]][Slhat.val.list[[ix]] < Slhat.extvalues.list[[ix]][1]] = Slhat.extvalues.list[[ix]][1]
+        Slhat.val.list[[ix]]
+      })
+      
       corr.list[[i]] = as.vector(sapply(Slhat.val.list, function(Slhat) cor(Slhat, Y.val)))
     }
+    stopCluster(cl)
     corr.vec = apply(do.call(rbind, corr.list), 2, mean)
     
     lam.max = lam.vec[which.min(abs(abs(corr.vec)-1))]

@@ -111,7 +111,7 @@ rf.weight = function(ml.rf, X.train, X.test){
     
     ntrees = dim(nodes.train)[2]
     n.test = dim(nodes.test)[1]
-    # n.train = dim(nodes.train)[1]
+    n.train = dim(nodes.train)[1]
     
     w.list = list()
     k.list = list()
@@ -129,7 +129,15 @@ rf.weight = function(ml.rf, X.train, X.test){
       # 8.8 consider bootrap sampling
       k.list[[i]] = apply(wtimesn, 2, sum)
       # length n.test; each element 1 by ntrees
-      woverk = sapply(1:ntrees, function(x) wtimesn[,x]/k.list[[i]][x])
+#      woverk = sapply(1:ntrees, function(x) wtimesn[,x]/k.list[[i]][x])
+      woverk = sapply(1:ntrees, function(x) {
+        if(k.list[[i]][x]){
+          wtimesn[,x]/k.list[[i]][x]
+        }else{
+          rep(0, n.train)
+        }
+      })
+      
       # n.train by ntrees
       
       wrf.list[[i]] = apply(woverk, 1, sum)/ntrees
@@ -223,9 +231,16 @@ penalized.origin.method = function(X.train, Y.train, X.test, wrf.list, lambda.ve
   nlambda = length(lambda.vec)
   
   diff.mtx.list = diff.matrix(X.train, X.test)
+  # beta.array = sapply(1:n.test, function(x) 
+  #   if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=1) {
+  #     matrix(rep(c(mean(Y.train[wrf.list[[x]]!=0]), rep(0, p)), nlambda), ncol = nlambda)}else{
+  #       as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
+  #     }
+  #   , simplify = "array") # (p+1) by nlambda by n.test
+  
   beta.array = sapply(1:n.test, function(x) 
-    if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=1) {
-      matrix(rep(c(mean(Y.train[wrf.list[[x]]!=0]), rep(0, p)), nlambda), ncol = nlambda)}else{
+    if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10) {
+      matrix(rep(c(sum(Y.train*wrf.list[[x]]), rep(0, p)), nlambda), ncol = nlambda)}else{
         as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
       }
     , simplify = "array") # (p+1) by nlambda by n.test
