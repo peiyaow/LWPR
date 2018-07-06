@@ -220,7 +220,12 @@ origin.method = function(X.train, Y.train, X.test, wrf.list){
 
 diff.matrix = function(X.train, X.test){
   n.test = dim(X.test)[1]
-  diff.mtx.list = lapply(1:n.test, function(x) t(t(X.train) - X.test[x, ]))
+  diff.mtx.list = lapply(1:n.test, function(x) {
+    temp = t(t(X.train) - X.test[x, ])
+    temp_tiny = apply(t(t(X.train) - X.test[x, ]), 2, function(x) abs(x)<1e-4)
+    temp[temp_tiny] = 0
+    temp
+  })
   return(diff.mtx.list) # length n.test
 }
 
