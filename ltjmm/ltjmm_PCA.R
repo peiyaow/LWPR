@@ -116,7 +116,7 @@ fit <- stan(file = file.path(.libPaths()[1], "ltjmm", "stan", "ltjmm.stan"),
             pars = c('beta', 'delta', 'alpha0', 'alpha1', 'gamma',
                      'sigma_alpha0', 'sigma_alpha1', "sigma_delta", 'sigma_y', 'log_lik'),
             open_progress = FALSE, chains = 2, iter = 2000,
-            warmup = 1000, thin = 1, cores = 4, control = list(max_treedepth = 15))
+            thin = 1, cores = 4, control = list(max_treedepth = 15))
 save.image("ltjmm_PCA.RData")
 
 
