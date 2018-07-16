@@ -97,6 +97,24 @@ SlRf.weight.noDb = function(wrf.list, Y.train, sl.train, sl.test, Di){
   return(list(Yhat = Yhat.test, w.list = newweight))
 }
 
+# compute the weight.list given X.train and X.val #
+slnp.noDb = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di){
+  # set.seed(1010)
+  # ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100, maxnodes = 16)
+  # wrf.list = rf.weight(ml.rf, X.train, X.val)
+  n.val = dim(X.val)[1]
+  n.train = dim(X.train)[1]
+  
+  # constant weight list
+  wrf.list = lapply(1:n.val, function(x) rep(1, n.train))
+  
+  myresult = SlRf.weight.noDb(wrf.list, Y.train, sl.train, sl.val, Di)
+  Yhat.val = myresult$Yhat
+  rwrf.list = myresult$w.list
+  mse.val = mean((Yhat.val - Y.val)^2)
+  return(list(Yhat = Yhat.val, mse = mse.val, w.list = rwrf.list))
+}
+
 rfguided.slnp.noDb = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di){
   # set.seed(1010)
   # ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100, maxnodes = 16)
@@ -320,75 +338,16 @@ cv.bothPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){
   return(list(Di = Di.selected, lambda = lam.selected, id.which = id.which))
 }
 
-
-# compute the weight.list given X.train and X.val #
-slnp.noDb = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di){
-  # set.seed(1010)
-  # ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100, maxnodes = 16)
-  # wrf.list = rf.weight(ml.rf, X.train, X.val)
-  n.val = dim(X.val)[1]
-  n.train = dim(X.train)[1]
-  
-  # constant weight list
-  wrf.list = lapply(1:n.val, function(x) rep(1, n.train))
-  
-  myresult = SlRf.weight.noDb(wrf.list, Y.train, sl.train, sl.val, Di)
-  Yhat.val = myresult$Yhat
-  rwrf.list = myresult$w.list
-  mse.val = mean((Yhat.val - Y.val)^2)
-  return(list(Yhat = Yhat.val, mse = mse.val, w.list = rwrf.list))
-}
-
-#########################################################################################################
-gs.compweight = function(X.train, X.test, sl.train, sl.test, Di){
-  # bandwidth of gs kernel computed from rule of thumb
-  n.train = dim(X.train)[1]
-  n.test = dim(X.test)[1]
-  p = dim(X.train)[2]
-  
-  ind.list = lapply(sl.test, function(x) (abs(x - sl.train) < Di)) # length n.test; each element n.train by 1
-  # print(ind.list)
-  # bw = apply(X.train, 2, function(x) 1.06*sd(x)*length(x)^(-1/5)) # Silverman's rule of thumb for univariate X
-  # bw = apply(X.train, 2, function(x) sd(x)*n.train^(-1/(p+4))) # multivariate bw from paper multibandwidth.pdf
-  # bw.list = lapply(1:n.test, function(x) apply(X.train[ind.list[[x]], ], 2, function(y) ifelse(sd(y)<1e-5, 1, sd(y))*(sum(ind.list[[x]])^(-1/(p+4))) ) )
-  bw.list = lapply(1:n.test, function(x) apply(X.train[ind.list[[x]], ], 2, function(y) ifelse(sd(y)<1e-5, 1, sd(y))*(sum(ind.list[[x]])^(-1/(p+4)))*(4/(p+2))^(1/(p+4))*10 ) )
-  # print(bw.list)
-  diff.mtx.list = diff.matrix(X.train, X.test) # length n.test
-  # w.list = lapply(diff.mtx.list, function(x) compweight(bw, t(x)))
-  w.list = lapply(1:n.test, function(x) compweight(bw.list[[x]], t(diff.mtx.list[[x]])))
-  return(w.list)
-}
-
-gsslnp.noDb = function(X.train, Y.train, sl.train, X.test, Y.test, sl.test, Di){
-  # set.seed(1010)
-  # ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100, maxnodes = 16)
-  # wrf.list = rf.weight(ml.rf, X.train, X.test)
-  n.test = dim(X.test)[1]
-  n.train = dim(X.train)[1]
-  
-  # constant weight list
-  # wrf.list = lapply(1:n.test, function(x) rep(1, n.train))
-  # gaussian weight list
-  gsw.list = gs.compweight(X.train, X.test, sl.train, sl.test, Di)
-  # print(gsw.list[[1]])
-  
-  myresult = SlRf.weight.noDb(gsw.list, Y.train, sl.train, sl.test, Di)
-  
-  Yhat.test = myresult$Yhat
-  rwrf.list = myresult$w.list
-  mse.test = mean((Yhat.test - Y.test)^2)
-  return(list(Yhat = Yhat.test, mse = mse.test, w.list = rwrf.list))
-}
-
-cv.GSSlPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){ 
-  # written on 8.8 compute and select the best lambda of local linear regression with local weights given by SlRfPen; Di Db fixed 
+cv.bothPen.noDb.nolambda = function(label, X, Y, alpha, nfolds, sl, Di.vec){ 
   # set.seed(1011)
   flds = createFolds(label, k = nfolds, list = TRUE, returnTrain = FALSE)
   
-  llam = length(lambda.vec)
+  #llam = length(lambda.vec)
+  llam = 100
   lDi = length(Di.vec)
   
-  mse.list = list()
+  mse.Rf.list = list()
+  mse.noRf.list = list()
   for (k in 1:nfolds){
     # for np training #
     X.train = X[unlist(flds[-k]), ]
@@ -398,34 +357,77 @@ cv.GSSlPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){
     sl.train = sl[unlist(flds[-k])]
     sl.val = sl[unlist(flds[k])]
     # set.seed(1010)
-    # ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100, maxnodes = 16)
-    # wrf.list = rf.weight(ml.rf, X.train, X.val)
-    mse.list[[k]] = list()
+    ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100)
+    wrf.list = rf.weight(ml.rf, X.train, X.val)
+    mse.Rf.list[[k]] = list()
+    mse.noRf.list[[k]] = list()
     for (i in 1:lDi){
       # compute new weights
-      # newweight.list = SlRf.weight.noDb(wrf.list, Y.train, sl.train, sl.val, Di.vec[i])$w.list
-      newweight.list = gsslnp.noDb(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di.vec[i])$w.list
-      # print(newweight.list)
-      Yhat.mtx = penalized.origin.method(X.train, Y.train, X.val, newweight.list, lambda.vec, alpha)$Yhat
-      mse.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(x^2))
+      newweight.list = SlRf.weight.noDb(wrf.list, Y.train, sl.train, sl.val, Di.vec[i])$w.list
+      # Yhat.mtx = penalized.origin.method(X.train, Y.train, X.val, newweight.list, lambda.vec, alpha)$Yhat
+      Yhat.mtx = penalized.origin.method.nolambda(X.train, Y.train, X.val, newweight.list, alpha)$Yhat
+      
+      mse.Rf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(x^2))
+      
+      newweight.list = slnp.noDb(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di.vec[i])$w.list
+      # Yhat.mtx = penalized.origin.method(X.train, Y.train, X.val, newweight.list, lambda.vec, alpha)$Yhat
+      Yhat.mtx = penalized.origin.method.nolambda(X.train, Y.train, X.val, newweight.list, alpha)$Yhat
+      mse.noRf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(x^2))
     }
-    mse.list[[k]] = do.call(rbind, mse.list[[k]])
+    mse.Rf.list[[k]] = do.call(rbind, mse.Rf.list[[k]])
+    mse.noRf.list[[k]] = do.call(rbind, mse.noRf.list[[k]])
   }
-  mse.array = array(unlist(mse.list), dim = c(lDi, llam, nfolds))
-  measure.mtx = apply(mse.array, c(1,2), mean)
-  # print(mse.array)
-  # print(measure.mtx)
-  # c(lDb, lDi, nfolds)
   
+  mse.Rf.array = array(unlist(mse.Rf.list), dim = c(lDi, llam, nfolds))
+  measure.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) mean(x, na.rm = T))
+  sd.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) sd(x, na.rm = T))
+  
+  mse.noRf.array = array(unlist(mse.noRf.list), dim = c(lDi, llam, nfolds))
+  measure.noRf.mtx = apply(mse.noRf.array, c(1,2), mean)
+  sd.noRf.mtx = apply(mse.noRf.array, c(1,2), function(x) sd(x, na.rm = T))
+  
+  id.which = which.min(c(min(measure.Rf.mtx), min(measure.noRf.mtx))) # 1 stands for Rf 2 stands for noRf
+  if (id.which == 1){
+    measure.mtx = measure.Rf.mtx
+    sd.mtx = sd.Rf.mtx
+  }else{
+    measure.mtx = measure.noRf.mtx
+    sd.mtx = sd.noRf.mtx
+  }
   min.id = which.min(measure.mtx)
   min.id.Di = (min.id - 1)%%lDi + 1
   min.id.lam = ceiling(min.id/lDi)
-  # 
-  Di.selected = Di.vec[min.id.Di]
-  lam.selected = lambda.vec[min.id.lam]
   
-  return(list(Di = Di.selected, lambda = lam.selected, mse.array = mse.array, mse.mtx = measure.mtx))
+  # # -----new 1se----- 
+  # min.1se = sd.mtx[min.id.Di, min.id.lam]
+  # TF.mtx = measure.mtx < (min(measure.mtx)+min.1se) # indicator of whether the measure is within 1se
+  # # search the largest lambda within the measure.mtx+1se
+  # flag = 0
+  # i_lam = 0
+  # while (flag == 0){
+  #   i_lam = i_lam + 1
+  #   if (sum(TF.mtx[,i_lam])!=0){
+  #     flag = i_lam
+  #   }
+  # }
+  # # ----------------- 
+  
+  # min
+  Di.selected = Di.vec[min.id.Di]
+  #lam.selected = lambda.vec[min.id.lam]
+  
+  # 1se
+  # lam.selected = lambda.vec[flag]
+  # Di.selected = Di.vec[which.min(measure.mtx[,flag])]
+  
+  return(list(Di = Di.selected, lambda.id = min.id.lam, id.which = id.which))
 }
+
+
+
+
+
+
 
 
 
