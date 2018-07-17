@@ -236,7 +236,7 @@ diff.matrix.weight.standardize = function(X.train, X.test, w.list){
   diff.mtx.list = lapply(1:n.test, function(x) {
     temp = t(t(X.train) - X.test[x, ])
     temp.col.mean = apply(diag(w.list[[x]])%*%temp, 2, sum)
-    temp.col.var = apply(diag(w.list[[x]])%*%(temp - temp.col.mean)^2, 2, sum)
+    temp.col.var = apply(diag(w.list[[x]])%*%sweep(temp, 2, temp.col.mean)^2, 2, sum)
     temp.col.sd = sqrt(temp.col.var)
     t(apply(temp, 1, function(row) (row - temp.col.mean)/temp.col.sd))
   })
@@ -305,7 +305,7 @@ penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wrf.list, 
     else{
       lam_max = lambda.max(diff.mtx.list[[x]], Y.train, wrf.list[[x]], alpha)
       lambda.vec = exp(seq(log(lam_max), log(lam_max*1e-3), length.out = nlambda))
-      as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
+      as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec, standardize = F)))
     }
     , simplify = "array") # (p+1) by nlambda by n.test
   
@@ -329,7 +329,8 @@ predict.penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wr
     else{
       lam_max = lambda.max(diff.mtx.list[[x]], Y.train, wrf.list[[x]], alpha)
       lambda.vec = exp(seq(log(lam_max), log(lam_max*1e-3), length.out = nlambda))
-      fit = glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)
+      fit = glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec, standardize = F)
+      # print(lambda.vec[lam.id])
       beta.x = as.vector(coef(fit, s=lambda.vec[lam.id]))
       beta[x] = beta.x[1]}
   }
