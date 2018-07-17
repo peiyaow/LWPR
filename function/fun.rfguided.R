@@ -246,10 +246,10 @@ diff.matrix.weight.standardize = function(X.train, X.test, w.list){
 lambda.max = function(X, Y, w, alpha){
   if (alpha){
     WX = diag(w)%*%X
-    lambda.vec = t(WX)%*%Y/alpha
+    lambda.vec = abs(t(WX)%*%Y/alpha)
     lambda_max = max(lambda.vec)
   }else{
-    lambda_max = exp(8)
+    lambda_max = exp(7)
   }
   return(lambda_max)
 }
