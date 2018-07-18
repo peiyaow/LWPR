@@ -97,6 +97,13 @@ SlRf.weight.noDb = function(wrf.list, Y.train, sl.train, sl.test, Di){
   return(list(Yhat = Yhat.test, w.list = newweight))
 }
 
+Sl.weight.noDb = function(w.list, Y.train, sl.train, sl.val, Di){ 
+  myresult = SlRf.weight.noDb(w.list, Y.train, sl.train, sl.val, Di)
+  Yhat.val = myresult$Yhat
+  rw.list = myresult$w.list
+  return(list(Yhat = Yhat.val, w.list = rw.list))
+}
+
 # compute the weight.list given X.train and X.val #
 slnp.noDb = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di){
   # set.seed(1010)
@@ -114,6 +121,7 @@ slnp.noDb = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di){
   mse.val = mean((Yhat.val - Y.val)^2)
   return(list(Yhat = Yhat.val, mse = mse.val, w.list = rwrf.list))
 }
+
 
 rfguided.slnp.noDb = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di){
   # set.seed(1010)
@@ -423,7 +431,123 @@ cv.bothPen.noDb.nolambda = function(label, X, Y, alpha, nfolds, sl, Di.vec){
   return(list(Di = Di.selected, lambda.id = min.id.lam, id.which = id.which))
 }
 
+cv.ordinlog.both.noDb = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, lDi = 20){
+  flds = createFolds(label, k = nfolds, list = TRUE, returnTrain = FALSE)
+  llam = length(lam.vec)
+  mse.Rf.list = list()
+  mse.noRf.list = list()
+  
+  cl = makeCluster(4) # number of cores you can use
+  registerDoParallel(cl)
+  
+  for (i in 1:nfolds){
+    X.train = X[unlist(flds[-i]), ]
+    X.val = X[unlist(flds[i]), ]
+    Y.train = Y[unlist(flds[-i])]
+    Y.val = Y[unlist(flds[i])]
+    label.train = label[unlist(flds[-i])]
+    label.val = label[unlist(flds[i])]
+    
+    n.train = dim(X.train)[1]
+    n.val = dim(X.val)[1]
+    
+    #      ml.list = apply(as.matrix(lam.vec), 1, function(x) ordin.logistic.en(label.train, X.train, x, alpha, initial.x))
+    
+    ml.list = foreach(lam=lam.vec, .export = c("ordin.logistic.en", "penalike.en", "myphi", "mygrad.en")) %dopar% {
+      ordin.logistic.en(label.train, X.train, lam, alpha, initial.x)
+    }
+    Slhat.train.list = lapply(ml.list, function(ml) X.train%*%ml$w)
+    Slhat.val.list = lapply(ml.list, function(ml) X.val%*%ml$w)
+    
+    # new detect outliers and delete outliers
+    Slhat.train.extvalues.list = lapply(Slhat.train.list, function(sl) boxplot(sl, plot = F)$stats[c(1,5),1])
+    Slhat.train.list = lapply(1:length(Slhat.train.list), function(ix){
+      Slhat.train.list[[ix]][Slhat.train.list[[ix]] > Slhat.train.extvalues.list[[ix]][2]] = Slhat.train.extvalues.list[[ix]][2]
+      Slhat.train.list[[ix]][Slhat.train.list[[ix]] < Slhat.train.extvalues.list[[ix]][1]] = Slhat.train.extvalues.list[[ix]][1]
+      Slhat.train.list[[ix]]
+    })
+    
+    Slhat.val.extvalues.list = lapply(Slhat.val.list, function(sl) boxplot(sl, plot = F)$stats[c(1,5),1])
+    Slhat.val.list = lapply(1:length(Slhat.val.list), function(ix){
+      Slhat.val.list[[ix]][Slhat.val.list[[ix]] > Slhat.val.extvalues.list[[ix]][2]] = Slhat.val.extvalues.list[[ix]][2]
+      Slhat.val.list[[ix]][Slhat.val.list[[ix]] < Slhat.val.extvalues.list[[ix]][1]] = Slhat.val.extvalues.list[[ix]][1]
+      Slhat.val.list[[ix]]
+    })
+    
+    ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100)
+    wrf.list = rf.weight(ml.rf, X.train, X.val)
+    w.list = lapply(1:n.val, function(x) rep(1, n.train))
+    
+    # mse.Rf.list[[i]] = list()
+    # mse.noRf.list[[i]] = list()
+    
+    mse.list = foreach(j = seq(1,llam), .export = c("get.mse.vec", "SlRf.weight.noDb", "Sl.weight.noDb", "sur.reweight.noDb", "compweight")) %dopar% {
+      get.mse.vec(lDi, Slhat.train.list[[j]], Slhat.val.list[[j]], Y.train, Y.val, wrf.list, w.list)
+    }
+    mse.array = array(unlist(mse.list), dim = c(lDi, 2, llam))
+    mse.array = aperm(mse.array, c(1,3,2))
+    
+    mse.Rf.list[[i]] = mse.array[,,1] # lDi, llam
+    mse.noRf.list[[i]] = mse.array[,,2]
+    # for (j in 1:length(lam.vec)){
+    #   Di.vec = seq(sd(Slhat.train.list[[j]])/5, sd(Slhat.train.list[[j]])*2, length.out = lDi)
+    #   mse.Rf.list[[i]][[j]] = list()
+    #   mse.noRf.list[[i]][[j]] = list()
+    #   for (d in 1:lDi){
+    #     Yhat.SlRf = SlRf.weight.noDb(wrf.list, Y.train, Slhat.train.list[[j]], Slhat.val.list[[j]], Di.vec[d])$Yhat
+    #     Yhat.Sl = Sl.weight.noDb(w.list, Y.train, Slhat.train.list[[j]], Slhat.val.list[[j]], Di.vec[d])$Yhat
+    #     mse.Rf.list[[i]][[j]][[d]] = mean((Yhat.SlRf - Y.val)^2)
+    #     mse.noRf.list[[i]][[j]][[d]] = mean((Yhat.Sl - Y.val)^2)
+    #   }
+    #   mse.Rf.list[[i]][[j]] = do.call(c, mse.Rf.list[[i]][[j]]) # vector of length lDi
+    #   mse.noRf.list[[i]][[j]] = do.call(c, mse.noRf.list[[i]][[j]])
+    # }
+    # mse.Rf.list[[i]] = do.call(cbind, mse.Rf.list[[i]]) # 20 by llam
+    # mse.noRf.list[[i]] = do.call(cbind, mse.noRf.list[[i]])
+  }
+  stopCluster(cl)
+  mse.Rf.array = array(unlist(mse.Rf.list), dim = c(lDi, llam, nfolds))
+  mse.noRf.array = array(unlist(mse.noRf.list), dim = c(lDi, llam, nfolds))
+  measure.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) mean(x, na.rm = T))
+  measure.noRf.mtx = apply(mse.noRf.array, c(1,2), function(x) mean(x, na.rm = T))
+  sd.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) sd(x, na.rm = T))
+  sd.noRf.mtx = apply(mse.noRf.array, c(1,2), function(x) sd(x, na.rm = T))
+  
+  id.which = which.min(c(min(measure.Rf.mtx), min(measure.noRf.mtx))) # 1 stands for Rf 2 stands for noRf
+  if (id.which == 1){
+    measure.mtx = measure.Rf.mtx
+    sd.mtx = sd.Rf.mtx
+  }else{
+    measure.mtx = measure.noRf.mtx
+    sd.mtx = sd.noRf.mtx
+  }
+  min.id = which.min(measure.mtx)
+  min.id.Di = (min.id - 1)%%lDi + 1
+  min.id.lam = ceiling(min.id/lDi)
+  
+  Di.vec = seq(sd(Slhat.train.list[[min.id.lam]])/5, sd(Slhat.train.list[[min.id.lam]])*2, length.out = lDi)
+  Di.selected = Di.vec[min.id.Di]
+  lam.selected = lam.vec[min.id.lam]
+  
+  ordin.ml.best = ordin.logistic.en(label, X, lam.selected, alpha, initial.x)
+  
+  return(list(gam = lam.selected, Di = Di.selected, id = id.which, ordin.ml= ordin.ml.best))
+}
 
+get.mse.vec = function(lDi, Sl.train, Sl.val, Y.train, Y.val, wrf.list, w.list){
+  Di.vec = seq(sd(Sl.train)/5, sd(Sl.train)*2, length.out = lDi)
+  mse.Rf.list = list()
+  mse.noRf.list = list()
+  for (d in 1:lDi){
+    Yhat.SlRf = SlRf.weight.noDb(wrf.list, Y.train, Sl.train, Sl.val, Di.vec[d])$Yhat
+    Yhat.Sl = Sl.weight.noDb(w.list, Y.train, Sl.train, Sl.val, Di.vec[d])$Yhat
+    mse.Rf.list[[d]] = mean((Yhat.SlRf - Y.val)^2)
+    mse.noRf.list[[d]] = mean((Yhat.Sl - Y.val)^2)
+  }
+  mse.Rf.vec = do.call(c, mse.Rf.list) # vector of length 20
+  mse.noRf.vec = do.call(c, mse.noRf.list)
+  return(list(Rf = mse.Rf.vec, noRf = mse.noRf.vec))
+}
 
 
 
