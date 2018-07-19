@@ -213,8 +213,8 @@ rfguided.slnp = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di, D
 origin.method = function(X.train, Y.train, X.test, wrf.list){
   n.test = dim(X.test)[1]
   # p = dim(X.test)[2]
-  diff.mtx.list = diff.matrix(X.train, X.test)
-  # diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta.matrix = sapply(1:n.test, function(x) t(lm(Y.train~diff.mtx.list[[x]], weights = wrf.list[[x]])$coef)) # (p+1) by n.test
   return(list(Yhat = beta.matrix[1,], beta.matrix = beta.matrix))
@@ -223,7 +223,8 @@ origin.method = function(X.train, Y.train, X.test, wrf.list){
 diff.matrix = function(X.train, X.test){
   n.test = dim(X.test)[1]
   diff.mtx.list = lapply(1:n.test, function(x) {
-    temp = t(t(X.train) - X.test[x, ])
+#    temp = t(t(X.train) - X.test[x, ])
+    temp = sweep(X.train, 2, X.test[x, ])
     temp.col.mean = apply(temp, 2, sum)
     temp.col.var = apply(sweep(temp, 2, temp.col.mean)^2, 2, sum)
     temp.col.sd = sqrt(temp.col.var)
@@ -235,7 +236,8 @@ diff.matrix = function(X.train, X.test){
 diff.matrix.weight.standardize = function(X.train, X.test, w.list){
   n.test = dim(X.test)[1]
   diff.mtx.list = lapply(1:n.test, function(x) {
-    temp = t(t(X.train) - X.test[x, ])
+#    temp = t(t(X.train) - X.test[x, ])
+    temp = sweep(X.train, 2, X.test[x, ])
     temp.col.mean = apply(diag(w.list[[x]])%*%temp, 2, sum)
     temp.col.var = apply(diag(w.list[[x]])%*%sweep(temp, 2, temp.col.mean)^2, 2, sum)
     temp.col.sd = sqrt(temp.col.var)
@@ -260,15 +262,8 @@ penalized.origin.method = function(X.train, Y.train, X.test, wrf.list, lambda.ve
   p = dim(X.test)[2]
   nlambda = length(lambda.vec)
   
-  diff.mtx.list = diff.matrix(X.train, X.test)
-  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
-  
-  # beta.array = sapply(1:n.test, function(x) 
-  #   if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=1) {
-  #     matrix(rep(c(mean(Y.train[wrf.list[[x]]!=0]), rep(0, p)), nlambda), ncol = nlambda)}else{
-  #       as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
-  #     }
-  #   , simplify = "array") # (p+1) by nlambda by n.test
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta.array = sapply(1:n.test, function(x) 
     if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10) {
@@ -289,15 +284,8 @@ penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wrf.list, 
   p = dim(X.test)[2]
   nlambda = 100
   
-  diff.mtx.list = diff.matrix(X.train, X.test)
-  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
-  
-  # beta.array = sapply(1:n.test, function(x) 
-  #   if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=1) {
-  #     matrix(rep(c(mean(Y.train[wrf.list[[x]]!=0]), rep(0, p)), nlambda), ncol = nlambda)}else{
-  #       as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
-  #     }
-  #   , simplify = "array") # (p+1) by nlambda by n.test
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta.array = sapply(1:n.test, function(x) 
     if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10){
@@ -322,8 +310,8 @@ predict.penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wr
   p = dim(X.test)[2]
   nlambda = 100
   
-  diff.mtx.list = diff.matrix(X.train, X.test)
-  # diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta = c()
   for (x in 1:n.test){

@@ -41,10 +41,16 @@ label.list = lapply(1:2, function(x) label[id[[x]]])
 # ----------------------------------- do scale ----------------------------------
 X1.mean = apply(X.list[[1]], 2, mean)
 X1.sd = apply(X.list[[1]], 2, sd)
-# if the std is really small just subtract the mean in the following step 
-X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
-X.list[[1]] = t(apply(X.list[[1]], 1, function(x) (x - X1.mean)/X1.sd))
-X.list[[2]] = t(apply(X.list[[2]], 1, function(x) (x - X1.mean)/X1.sd))
+
+X.list[[1]] = sweep(X.list[[1]], 2, X1.mean)
+X.list[[1]] = sweep(X.list[[1]], 2, X1.sd, "/")
+
+X.list[[2]] = sweep(X.list[[2]], 2, X1.mean)
+X.list[[2]] = sweep(X.list[[2]], 2, X1.sd, "/")
+# # if the std is really small just subtract the mean in the following step 
+# X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
+# X.list[[1]] = t(apply(X.list[[1]], 1, function(x) (x - X1.mean)/X1.sd))
+# X.list[[2]] = t(apply(X.list[[2]], 1, function(x) (x - X1.mean)/X1.sd))
 print("Finish scaling features")
 # -------------------------------------------------------------------------------
 
@@ -67,10 +73,17 @@ for (m in 1:2){
 }
 X1.interaction.mean = apply(X.interaction.list[[1]], 2, mean)
 X1.interaction.sd = apply(X.interaction.list[[1]], 2, sd)
+
+X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.mean)
+X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.sd, "/")
+
+X.interaction.list[[2]] = sweep(X.interaction.list[[2]], 2, X1.interaction.mean)
+X.interaction.list[[2]] = sweep(X.interaction.list[[2]], 2, X1.interaction.sd, "/")
+
 # if the std is really small just subtract the mean in the following step 
-X1.interaction.sd = sapply(X1.interaction.sd, function(x) ifelse(x<1e-5, 1, x)) 
-X.interaction.list[[1]] = t(apply(X.interaction.list[[1]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
-X.interaction.list[[2]] = t(apply(X.interaction.list[[2]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
+# X1.interaction.sd = sapply(X1.interaction.sd, function(x) ifelse(x<1e-5, 1, x)) 
+# X.interaction.list[[1]] = t(apply(X.interaction.list[[1]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
+# X.interaction.list[[2]] = t(apply(X.interaction.list[[2]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
 X.plus.inter.list = lapply(1:2, function(x) cbind(X.list[[x]], X.interaction.list[[x]]))
 
 
