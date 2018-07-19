@@ -130,7 +130,9 @@ write.table(label.list[[1]], paste0("label_train+", name.id, ".txt"), sep="\t", 
 write.table(label.list[[2]], paste0("label_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
 print("Finish ordinal logistic regression")
 
-Di.selected = ordinlog.list$Di
+Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = lDi)
+Di.selected = Di.vec[ordinlog.list$Di.id]
+
 id.which = ordinlog.list$id
 
 if(id.which == 1){

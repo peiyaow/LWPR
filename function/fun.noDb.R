@@ -525,13 +525,13 @@ cv.ordinlog.both.noDb = function(label, X, Y, lam.vec, alpha, initial.x, nfolds,
   min.id.Di = (min.id - 1)%%lDi + 1
   min.id.lam = ceiling(min.id/lDi)
   
-  Di.vec = seq(sd(Slhat.train.list[[min.id.lam]])/5, sd(Slhat.train.list[[min.id.lam]])*2, length.out = lDi)
-  Di.selected = Di.vec[min.id.Di]
+  # Di.vec = seq(sd(Slhat.train.list[[min.id.lam]])/5, sd(Slhat.train.list[[min.id.lam]])*2, length.out = lDi)
+  # Di.selected = Di.vec[min.id.Di]
   lam.selected = lam.vec[min.id.lam]
   
   ordin.ml.best = ordin.logistic.en(label, X, lam.selected, alpha, initial.x)
   
-  return(list(gam = lam.selected, Di = Di.selected, id = id.which, ordin.ml= ordin.ml.best))
+  return(list(gam = lam.selected, Di.id = min.id.Di, id = id.which, ordin.ml= ordin.ml.best))
 }
 
 get.mse.vec = function(lDi, Sl.train, Sl.val, Y.train, Y.val, wrf.list, w.list){
