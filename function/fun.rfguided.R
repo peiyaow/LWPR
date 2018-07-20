@@ -214,7 +214,8 @@ origin.method = function(X.train, Y.train, X.test, wrf.list){
   n.test = dim(X.test)[1]
   # p = dim(X.test)[2]
   #diff.mtx.list = diff.matrix(X.train, X.test)
-  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta.matrix = sapply(1:n.test, function(x) t(lm(Y.train~diff.mtx.list[[x]], weights = wrf.list[[x]])$coef)) # (p+1) by n.test
   return(list(Yhat = beta.matrix[1,], beta.matrix = beta.matrix))
@@ -230,6 +231,12 @@ diff.matrix = function(X.train, X.test){
     temp.col.sd = sqrt(temp.col.var)
     t(apply(temp, 1, function(row) (row - temp.col.mean)/temp.col.sd))
   })
+  return(diff.mtx.list) # length n.test
+}
+
+diff.matrix.simple = function(X.train, X.test){
+  n.test = dim(X.test)[1]
+  diff.mtx.list = lapply(1:n.test, function(x) sweep(X.train, 2, X.test[x, ]))
   return(diff.mtx.list) # length n.test
 }
 
@@ -263,7 +270,8 @@ penalized.origin.method = function(X.train, Y.train, X.test, wrf.list, lambda.ve
   nlambda = length(lambda.vec)
   
   #diff.mtx.list = diff.matrix(X.train, X.test)
-  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta.array = sapply(1:n.test, function(x) 
     if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10) {
@@ -285,7 +293,8 @@ penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wrf.list, 
   nlambda = 100
   
   #diff.mtx.list = diff.matrix(X.train, X.test)
-  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta.array = sapply(1:n.test, function(x) 
     if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10){
@@ -311,18 +320,22 @@ predict.penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wr
   nlambda = 100
   
   #diff.mtx.list = diff.matrix(X.train, X.test)
-  diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta = c()
   for (x in 1:n.test){
     if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10){
+      print(1)
       beta[x] = sum(Y.train*wrf.list[[x]])
     }
     else{
+      print(2)
       lam_max = lambda.max(diff.mtx.list[[x]], Y.train, wrf.list[[x]], alpha)
       lambda.vec = exp(seq(log(lam_max), log(lam_max*1e-3), length.out = nlambda))
       fit = glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec, standardize = F)
       # print(lambda.vec[lam.id])
+      print(as.matrix(coef(fit, s=lambda.vec))[1,])
       beta.x = as.vector(coef(fit, s=lambda.vec[lam.id]))
       beta[x] = beta.x[1]}
   }
