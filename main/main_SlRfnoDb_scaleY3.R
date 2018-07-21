@@ -173,7 +173,7 @@ print("Finish local fitting without penalization")
 
 Yhat.mymethod = mymethod.res$Yhat
 rwrf.list = mymethod.res$w.list
-Yhat.mymethodPen = predict.penalized.origin.method.nolambda(X.selected.feature.list[[1]], Y.list[[1]], X.selected.feature.list[[2]], rwrf.list, lam.id, alpha)
+Yhat.mymethodPen = predict.penalized.origin.method.nolambda(X.selected.feature.list[[1]], Y.list[[1]], X.selected.feature.list[[2]], rwrf.list, lam.id, alpha)$Yhat
 print("Finish local fitting with penalization")
 # --------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------

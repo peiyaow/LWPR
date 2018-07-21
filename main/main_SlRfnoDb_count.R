@@ -38,10 +38,13 @@ label.list = lapply(1:2, function(x) label[id[[x]]])
 # ----------------------------------- do scale ----------------------------------
 X1.mean = apply(X.list[[1]], 2, mean)
 X1.sd = apply(X.list[[1]], 2, sd)
-# if the std is really small just subtract the mean in the following step 
-X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
-X.list[[1]] = t(apply(X.list[[1]], 1, function(x) (x - X1.mean)/X1.sd))
-X.list[[2]] = t(apply(X.list[[2]], 1, function(x) (x - X1.mean)/X1.sd))
+
+X.list[[1]] = sweep(X.list[[1]], 2, X1.mean)
+X.list[[1]] = sweep(X.list[[1]], 2, X1.sd, "/")
+
+X.list[[2]] = sweep(X.list[[2]], 2, X1.mean)
+X.list[[2]] = sweep(X.list[[2]], 2, X1.sd, "/")
+
 print("Finish scaling features")
 # -------------------------------------------------------------------------------
 
@@ -57,11 +60,11 @@ gamma.vec = exp(rev(seq(-2, 7, length.out = 50)))
 initial.x = c(seq(-2, 2, length.out = length(levels(label.list[[1]]))-1), rep(0,p), rep(1,p))
 
 measure.type = "corr"
-if (alpha == 0){
-  lambda.vec = c(1e6, exp(rev(seq(-2, 7, length.out = 99))))
-}else{
-  lambda.vec = c(1e6, exp(rev(seq(-7, 2, length.out = 99))))
-}
+# if (alpha == 0){
+#   lambda.vec = c(1e6, exp(rev(seq(-2, 7, length.out = 99))))
+# }else{
+#   lambda.vec = c(1e6, exp(rev(seq(-7, 2, length.out = 99))))
+# }
 # ----------------------------------------
 
 # ------------------------ ordinal logistic: Sl --------------------------
@@ -82,28 +85,41 @@ print("Finish ordinal logistic regression")
 # ------------------------------------------------------------------------
 
 # ----------------------------- SlRf LWPR --------------------------------- 
-par.list = cv.bothPen.noDb(label.list[[1]], X.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
+# par.list = cv.bothPen.noDb(label.list[[1]], X.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
+par.list = cv.bothPen.noDb.nolambda(label.list[[1]], X.list[[1]], Y.list[[1]], alpha, nfolds.llr, sl.list[[1]], Di.vec)
 
 Di.selected = par.list$Di
-lambda.selected = par.list$lambda
+lam.id = par.list$lambda.id
 id.which = par.list$id.which
 print("Finish SlRf cross validation")
 
+# Di.selected = par.list$Di
+# lambda.selected = par.list$lambda
+# id.which = par.list$id.which
+# print("Finish SlRf cross validation")
+
 if(id.which == 1){
-  ml.rf = randomForest(x = X.selected.feature.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
-  wrf.list = rf.weight(ml.rf, X.selected.feature.list[[1]], X.selected.feature.list[[2]])
+  ml.rf = randomForest(x = X.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
+  wrf.list = rf.weight(ml.rf, X.list[[1]], X.list[[2]])
   mymethod.res = SlRf.weight.noDb(wrf.list, Y.list[[1]], sl.list[[1]], sl.list[[2]], Di.selected)
 }else{
-  mymethod.res = slnp.noDb(X.selected.feature.list[[1]], Y.list[[1]], sl.list[[1]], X.selected.feature.list[[2]], Y.list[[2]], sl.list[[2]], Di.selected)
+  mymethod.res = slnp.noDb(X.list[[1]], Y.list[[1]], sl.list[[1]], X.list[[2]], Y.list[[2]], sl.list[[2]], Di.selected)
 }
 print("Finish local fitting without penalization")
 
 Yhat.mymethod = mymethod.res$Yhat
 rwrf.list = mymethod.res$w.list
-pom.list = penalized.origin.method(X.list[[1]], Y.list[[1]], X.list[[2]], rwrf.list, lambda.selected, alpha)
+pom.list = predict.penalized.origin.method.nolambda(X.list[[1]], Y.list[[1]], X.list[[2]], rwrf.list, lam.id, alpha)
 Yhat.mymethodPen = pom.list$Yhat
 betahat.mymethodPen = pom.list$betahat
 print("Finish local fitting with penalization")
+
+# Yhat.mymethod = mymethod.res$Yhat
+# rwrf.list = mymethod.res$w.list
+# pom.list = penalized.origin.method(X.list[[1]], Y.list[[1]], X.list[[2]], rwrf.list, lambda.selected, alpha)
+# Yhat.mymethodPen = pom.list$Yhat
+# betahat.mymethodPen = pom.list$betahat
+# print("Finish local fitting with penalization")
 # --------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------
 
@@ -139,6 +155,9 @@ file.name = c("ADNI1+G5+t=", as.character(t),".csv")
 file.name = paste(file.name, collapse ="")
 write.table(t(p.vec.list[[5]]), file = file.name, sep = ',', append = T, col.names = F, row.names = F)
 
-write.table(table(label.list[[2]], fake.label), file = "DX_distribution.csv", sep = ',', append = T, col.names = F, row.names = F)
+write.table(table(label.list[[2]], fake.label), file = paste(c("DX_distribution+t=", as.character(t), ".csv"), collapse =""), sep = ',', append = T, col.names = F, row.names = F)
+
+
+
 
 # ------------------------------------------------------------------------------------------------------------

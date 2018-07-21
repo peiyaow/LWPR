@@ -324,22 +324,28 @@ predict.penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wr
   #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta = c()
+  betahat = list()
   for (x in 1:n.test){
     if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10){
-      print(1)
+      #print(1)
       beta[x] = sum(Y.train*wrf.list[[x]])
+      betahat[[x]] = rep(0,p)
     }
     else{
-      print(2)
+      #print(2)
       lam_max = lambda.max(diff.mtx.list[[x]], Y.train, wrf.list[[x]], alpha)
       lambda.vec = exp(seq(log(lam_max), log(lam_max*1e-3), length.out = nlambda))
       fit = glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec, standardize = F)
       # print(lambda.vec[lam.id])
-      print(as.matrix(coef(fit, s=lambda.vec))[1,])
+      #print(as.matrix(coef(fit, s=lambda.vec))[1,])
       beta.x = as.vector(coef(fit, s=lambda.vec[lam.id]))
-      beta[x] = beta.x[1]}
+      beta[x] = beta.x[1]
+      betahat[[x]] = beta.x[-1]
+      }
   }
-  return(beta)
+  # return(beta)
+  betahat = do.call(cbind, betahat) # p by n.test
+  return(list(Yhat = beta, betahat = betahat))
 }
 
 cv.penalized.origin.method = function(label, X, Y, lambda.vec, alpha, nfolds){
