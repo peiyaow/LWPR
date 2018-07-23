@@ -131,9 +131,13 @@ measure.type = "corr"
 # ----------------------------------------
 
 # ------------------------ ordinal logistic: Sl --------------------------
-ordinlog.list = cv.ordinlog.en(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
+# ordinlog.list = cv.ordinlog.en(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
+# ordin.ml = ordinlog.list$ordin.ml
+# sl.list = lapply(1:2, function(x) as.vector(X.selected.feature.list[[x]]%*%ordin.ml$w))
+
+ordinlog.list = cv.ordinlog.en(label.list[[1]], X.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
 ordin.ml = ordinlog.list$ordin.ml
-sl.list = lapply(1:2, function(x) as.vector(X.selected.feature.list[[x]]%*%ordin.ml$w))
+sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
 
 # delete outliers
 sl.list = lapply(1:2, function(ix){
