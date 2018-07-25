@@ -120,7 +120,8 @@ nfolds.llr = 5 # local linear regression
 alpha0 = 0
 gamma.vec = exp(rev(seq(-2, 7, length.out = 50)))
 # initial point for optimization, first K-1 parameters are thetas, then the first coming p are coefficients the last p are slack variable
-initial.x = c(seq(-2, 2, length.out = length(levels(label.list[[1]]))-1), rep(0,p_dc), rep(1,p_dc))
+#initial.x = c(seq(-2, 2, length.out = length(levels(label.list[[1]]))-1), rep(0,p_dc), rep(1,p_dc))
+initial.x = c(seq(-2, 2, length.out = length(levels(label.list[[1]]))-1), rep(0,p), rep(1,p))
 
 measure.type = "corr"
 # if (alpha == 0){

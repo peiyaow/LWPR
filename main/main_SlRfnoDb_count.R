@@ -89,7 +89,7 @@ print("Finish ordinal logistic regression")
 par.list = cv.bothPen.noDb.nolambda(label.list[[1]], X.list[[1]], Y.list[[1]], alpha, nfolds.llr, sl.list[[1]], Di.vec)
 
 Di.selected = par.list$Di
-lam.id = par.list$lambda.id
+lam.id = 50
 id.which = par.list$id.which
 print("Finish SlRf cross validation")
 
