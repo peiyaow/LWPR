@@ -12,11 +12,11 @@ library(methods) # "is function issue by Rscript"
 library(glmnet)
 library(randomForest)
 
-load("/nas/longleaf/home/peiyao/LWPR/simulation/parameter/diag_cov/sim_par21.RData")
+load("/nas/longleaf/home/peiyao/LWPR/simulation0/parameter/diag_cov/sim_par21.RData")
 source("/nas/longleaf/home/peiyao/LWPR/function/fun.rfguided.R")
 source("/nas/longleaf/home/peiyao/LWPR/function/fun.noDb.R")
 source("/nas/longleaf/home/peiyao/LWPR/function/ordinlog1.R")
-source("/nas/longleaf/home/peiyao/LWPR/simulation/sim.fun.R")
+source("/nas/longleaf/home/peiyao/LWPR/simulation0/sim.fun.R")
 
 name.id = paste0("+alpha=", as.character(alpha))
 

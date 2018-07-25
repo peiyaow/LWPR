@@ -385,11 +385,8 @@ mysimulation5 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma
   Y = signal + err
   
   # choose some label and assign another label to it
-<<<<<<< HEAD
   percent = .2
-=======
-  percent = .1
->>>>>>> 9b750fb0fb03e81cf7eacbb1a7fb8f6a91c03873
+
   ix_change_label = sample(seq(1, length(label)), floor(percent*length(label)))
   P.mtx = P.mtx[o,]
   for (ix in ix_change_label){
