@@ -385,7 +385,8 @@ mysimulation5 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma
   Y = signal + err
   
   # choose some label and assign another label to it
-  percent = .2
+  percent = .1
+  truelabel = label
 
   ix_change_label = sample(seq(1, length(label)), floor(percent*length(label)))
   P.mtx = P.mtx[o,]
@@ -400,7 +401,7 @@ mysimulation5 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma
       label[ix] = c(1,3)[rbinom(1, 1, prob1)+1]
     }
   }
-  return(list(X = X, Y = Y, signal = signal, label = label, s = s))
+  return(list(X = X, Y = Y, signal = signal, label = label, s = s, truelabel = truelabel))
 }
 
 
