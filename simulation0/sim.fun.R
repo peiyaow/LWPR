@@ -385,7 +385,7 @@ mysimulation5 = function(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma
   Y = signal + err
   
   # choose some label and assign another label to it
-  percent = .1
+  percent = .2
   truelabel = label
 
   ix_change_label = sample(seq(1, length(label)), floor(percent*length(label)))
