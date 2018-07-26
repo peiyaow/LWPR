@@ -12,11 +12,13 @@ library(methods) # "is function issue by Rscript"
 library(glmnet)
 library(randomForest)
 
-load("/nas/longleaf/home/peiyao/LWPR/simulation/parameter/non_diag_cov/sim_par32.RData")
+load("/nas/longleaf/home/peiyao/LWPR/simulation0/parameter/non_diag_cov/sim_par32.RData")
 source("/nas/longleaf/home/peiyao/LWPR/function/fun.rfguided.R")
 source("/nas/longleaf/home/peiyao/LWPR/function/fun.noDb.R")
 source("/nas/longleaf/home/peiyao/LWPR/function/ordinlog1.R")
-source("/nas/longleaf/home/peiyao/LWPR/simulation/sim.fun.R")
+source("/nas/longleaf/home/peiyao/LWPR/simulation0/sim.fun.R")
+
+name.id = paste0("+alpha=", as.character(alpha))
 
 set.seed(myseed)
 data.list = lapply(1:2, function(ix) mysimulation5(n, p1, p2, p3, pc, p0, Sigma_1, Sigma_2, Sigma_3, Sigma_c, Sigma_0, rho_e, w))
@@ -24,7 +26,8 @@ data.list = lapply(1:2, function(ix) mysimulation5(n, p1, p2, p3, pc, p0, Sigma_
 X.list = lapply(1:2, function(ix) data.list[[ix]]$X)
 Y.list = lapply(1:2, function(ix) data.list[[ix]]$Y)
 label.list = lapply(1:2, function(ix) data.list[[ix]]$label)
-  
+truelabel.list = lapply(1:2, function(ix) data.list[[ix]]$truelabel)
+
 # X.list = list()
 # X.list[[1]] = X
 # X.list[[2]] = X.test
@@ -45,11 +48,11 @@ gamma.vec = exp(rev(seq(-2, 7, length.out = 50)))
 initial.x = c(seq(-4, 4, length.out = length(levels(label.list[[1]]))-1), rep(0,p), rep(1,p))
 
 measure.type = "corr"
-if (alpha == 0){
-  lambda.vec = c(1e6, exp(rev(seq(-2, 7, length.out = 99))))
-}else{
-  lambda.vec = c(1e6, exp(rev(seq(-7, 2, length.out = 99))))
-}
+# if (alpha == 0){
+#   lambda.vec = c(1e6, exp(rev(seq(-2, 7, length.out = 99))))
+# }else{
+#   lambda.vec = c(1e6, exp(rev(seq(-7, 2, length.out = 99))))
+# }
 # ----------------------------------------
 
 
@@ -94,12 +97,26 @@ sl.list = lapply(1:2, function(ix){
 
 # tuning parameter Di for SlRf
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
+
+write.table(sl.list[[1]], paste0("sl_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+write.table(sl.list[[2]], paste0("sl_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+write.table(Y.list[[1]], paste0("Y_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+write.table(Y.list[[2]], paste0("Y_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+write.table(truelabel.list[[1]], paste0("label_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+write.table(truelabel.list[[2]], paste0("label_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+print("Finish ordinal logistic regression")
 # ------------------------------------------------------------------------
 
 # ----------------------------- SlRf LWPR --------------------------------- 
-par.list = cv.bothPen.noDb(label.list[[1]], X.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
+# par.list = cv.bothPen.noDb(label.list[[1]], X.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
+# Di.selected = par.list$Di
+# lambda.selected = par.list$lambda
+# id.which = par.list$id.which
+# print("Finish SlRf cross validation")
+par.list = cv.bothPen.noDb.nolambda(label.list[[1]], X.list[[1]], Y.list[[1]], alpha, nfolds.llr, sl.list[[1]], Di.vec)
+
 Di.selected = par.list$Di
-lambda.selected = par.list$lambda
+lam.id = par.list$lambda.id
 id.which = par.list$id.which
 print("Finish SlRf cross validation")
 
@@ -112,10 +129,15 @@ if(id.which == 1){
 }
 print("Finish local fitting without penalization")
 
+# Yhat.mymethod = mymethod.res$Yhat
+# rwrf.list = mymethod.res$w.list
+# pom.list = penalized.origin.method(X.list[[1]], Y.list[[1]], X.list[[2]], rwrf.list, lambda.selected, alpha)
+# Yhat.mymethodPen = pom.list$Yhat
+# print("Finish local fitting with penalization")
+
 Yhat.mymethod = mymethod.res$Yhat
 rwrf.list = mymethod.res$w.list
-pom.list = penalized.origin.method(X.list[[1]], Y.list[[1]], X.list[[2]], rwrf.list, lambda.selected, alpha)
-Yhat.mymethodPen = pom.list$Yhat
+Yhat.mymethodPen = predict.penalized.origin.method.nolambda(X.list[[1]], Y.list[[1]], X.list[[2]], rwrf.list, lam.id, alpha)$Yhat
 print("Finish local fitting with penalization")
 # --------------------------------------------------------------------------
 
@@ -128,9 +150,14 @@ corr.mymethodPen = cor(Yhat.mymethodPen, Y.list[[2]])
 # ------------------------------------------------------------
 # -------------------------------------------------------------------------------------------
 
-method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "id.which", "seed")
-
+# method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "id.which", "seed")
+# 
+# file.name = c("mae+corr+sim+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha), ".csv") 
+# file.name = paste(file.name, collapse ="")
+# 
+# write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, id.which, myseed)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
+method.names = c("mae.mymethod", "mae.mymethodPen", "corr.mymethod", "corr.mymethodPen", "Di", "lambda.id", "id.which", "seed")
 file.name = c("mae+corr+sim+alpha0=", as.character(alpha0), "+alpha=", as.character(alpha), ".csv") 
 file.name = paste(file.name, collapse ="")
-
-write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, id.which, myseed)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 7), F, method.names), row.names = F)
+write.table(t(c(mae.mymethod, mae.mymethodPen, corr.mymethod, corr.mymethodPen, Di.selected, lam.id, id.which, myseed)), file = file.name, sep = ',', append = T, col.names = ifelse(rep(file.exists(file.name), 8), F, method.names), row.names = F)
+print("Finish all")
