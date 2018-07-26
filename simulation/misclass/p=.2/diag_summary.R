@@ -1,5 +1,6 @@
 library(readr)
-setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/misclass/p=.2")
+#setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/misclass/p=.1")
+setwd("C:/Users/peiyao/Documents/GitHub/LWPR/simulation/misclass/p=.2")
 setwd("./diag_cov")
 misclass.diag.list = list()
 for (i in c(1,2,3)){
@@ -16,7 +17,8 @@ for (i in c(1,2,3)){
 }
 result.matrix.misclass = round(do.call(rbind, misclass.diag.list),3)[,c(3,4,7,8)]
 
-setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/trueclass/")
+# setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/trueclass/")
+setwd("C:/Users/peiyao/Documents/GitHub/LWPR/simulation/trueclass/")
 setwd("./diag_cov")
 trueclass.diag.list = list()
 for (i in c(1,2,3)){
@@ -34,7 +36,8 @@ for (i in c(1,2,3)){
 result.matrix.trueclass = round(do.call(rbind, trueclass.diag.list),3)[,c(3,4,7,8)]
 
 
-setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/comp_result/")
+#setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/comp_result/")
+setwd("C:/Users/peiyao/Documents/GitHub/LWPR/simulation/comp_result/")
 setwd("./diag_cov")
 comp.diag.list =list()
 for (i in c(1,2,3)){
@@ -51,12 +54,15 @@ result.matrix.raw = rbind(result.matrix.comp, result.matrix.trueclass, result.ma
 result.list = list()
 for (t in 1:3){
   temp.matrix = result.matrix.raw[c(seq(1,4),seq(13,15),seq(22,24))+c(rep(1,4)*4, rep(1,6)*3)*(t-1),]
-  row.names(temp.matrix) = c("rf", "lasso", "ridge", "elast", "true ridge", "true elast", "true lasso", "mis ridge", "mis elast", "mis lasso")
+  temp.matrix = temp.matrix[c(1,3,4,2,5,6,7,8,9,10),]
+  row.names(temp.matrix) = c("rf","ridge", "elast",  "lasso", "true ridge", "true elast", "true lasso", "mis ridge", "mis elast", "mis lasso")
+  #row.names(temp.matrix) = c("rf", "lasso", "ridge", "elast", "true ridge", "true elast", "true lasso", "mis ridge", "mis elast", "mis lasso")
   colnames(temp.matrix) = c("mae.mean", "mae.sd", "corr.mean", "corr.sd")
   result.list[[t]] = temp.matrix
 }
 
-setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/misclass/p=.2")
+#setwd("C:/Users/peiyao/Dropbox/LWPR_result/simulation/misclass/p=.1")
+setwd("C:/Users/peiyao/Documents/GitHub/LWPR/simulation/misclass/p=.2")
 write.table(do.call(rbind, result.list), file = "diag_p=.2.csv", sep = ',', col.names = T, row.names = T)
 
 
