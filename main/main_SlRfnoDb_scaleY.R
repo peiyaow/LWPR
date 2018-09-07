@@ -102,6 +102,7 @@ if (alpha == 0){
 ordinlog.list = cv.ordinlog.en(label.list[[1]], X.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
 ordin.ml = ordinlog.list$ordin.ml
 sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
+<<<<<<< HEAD
 
 # delete outliers
 sl.list = lapply(1:2, function(ix){
@@ -110,6 +111,8 @@ sl.list = lapply(1:2, function(ix){
   sl.list[[ix]]
 })
 
+=======
+>>>>>>> 9b750fb0fb03e81cf7eacbb1a7fb8f6a91c03873
 # tuning parameter Di for SlRf
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
 

@@ -213,30 +213,65 @@ rfguided.slnp = function(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di, D
 origin.method = function(X.train, Y.train, X.test, wrf.list){
   n.test = dim(X.test)[1]
   # p = dim(X.test)[2]
-  diff.mtx.list = diff.matrix(X.train, X.test)
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  
   beta.matrix = sapply(1:n.test, function(x) t(lm(Y.train~diff.mtx.list[[x]], weights = wrf.list[[x]])$coef)) # (p+1) by n.test
   return(list(Yhat = beta.matrix[1,], beta.matrix = beta.matrix))
 }
 
 diff.matrix = function(X.train, X.test){
   n.test = dim(X.test)[1]
-  diff.mtx.list = lapply(1:n.test, function(x) t(t(X.train) - X.test[x, ]))
+  diff.mtx.list = lapply(1:n.test, function(x) {
+#    temp = t(t(X.train) - X.test[x, ])
+    temp = sweep(X.train, 2, X.test[x, ])
+    temp.col.mean = apply(temp, 2, sum)
+    temp.col.var = apply(sweep(temp, 2, temp.col.mean)^2, 2, sum)
+    temp.col.sd = sqrt(temp.col.var)
+    t(apply(temp, 1, function(row) (row - temp.col.mean)/temp.col.sd))
+  })
   return(diff.mtx.list) # length n.test
 }
 
+diff.matrix.simple = function(X.train, X.test){
+  n.test = dim(X.test)[1]
+  diff.mtx.list = lapply(1:n.test, function(x) sweep(X.train, 2, X.test[x, ]))
+  return(diff.mtx.list) # length n.test
+}
+
+diff.matrix.weight.standardize = function(X.train, X.test, w.list){
+  n.test = dim(X.test)[1]
+  diff.mtx.list = lapply(1:n.test, function(x) {
+#    temp = t(t(X.train) - X.test[x, ])
+    temp = sweep(X.train, 2, X.test[x, ])
+    temp.col.mean = apply(diag(w.list[[x]])%*%temp, 2, sum)
+    temp.col.var = apply(diag(w.list[[x]])%*%sweep(temp, 2, temp.col.mean)^2, 2, sum)
+    temp.col.sd = sqrt(temp.col.var)
+    t(apply(temp, 1, function(row) (row - temp.col.mean)/temp.col.sd))
+  })
+  return(diff.mtx.list)
+}
+
+lambda.max = function(X, Y, w, alpha){
+  if (alpha){
+    WX = diag(w)%*%X
+    lambda.vec = abs(t(WX)%*%Y/alpha)
+    lambda_max = max(lambda.vec)
+  }else{
+    lambda_max = exp(7)
+  }
+  return(lambda_max)
+}
 
 penalized.origin.method = function(X.train, Y.train, X.test, wrf.list, lambda.vec, alpha){ 
   n.test = dim(X.test)[1]
   p = dim(X.test)[2]
   nlambda = length(lambda.vec)
   
-  diff.mtx.list = diff.matrix(X.train, X.test)
-  # beta.array = sapply(1:n.test, function(x) 
-  #   if(sd(Y.train[wrf.list[[x]]!=0])==0 | length(Y.train[wrf.list[[x]]!=0])<=1) {
-  #     matrix(rep(c(mean(Y.train[wrf.list[[x]]!=0]), rep(0, p)), nlambda), ncol = nlambda)}else{
-  #       as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec)))
-  #     }
-  #   , simplify = "array") # (p+1) by nlambda by n.test
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
   
   beta.array = sapply(1:n.test, function(x) 
     if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10) {
@@ -251,6 +286,67 @@ penalized.origin.method = function(X.train, Y.train, X.test, wrf.list, lambda.ve
   return(list(Yhat = beta.array[1,,], betahat = beta.array[-1,,]))
 }
 
+
+penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wrf.list, alpha){ 
+  n.test = dim(X.test)[1]
+  p = dim(X.test)[2]
+  nlambda = 100
+  
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  
+  beta.array = sapply(1:n.test, function(x) 
+    if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10){
+      matrix(rep(c(sum(Y.train*wrf.list[[x]]), rep(0, p)), nlambda), ncol = nlambda)
+    }
+    else{
+      lam_max = lambda.max(diff.mtx.list[[x]], Y.train, wrf.list[[x]], alpha)
+      lambda.vec = exp(seq(log(lam_max), log(lam_max*1e-3), length.out = nlambda))
+      as.matrix(coef(glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec, standardize = F)))
+    }
+    , simplify = "array") # (p+1) by nlambda by n.test
+  
+  # adding local.feature.weight for each testing sample
+  beta.array = aperm(beta.array, c(1,3,2)) # (p+1) by n.test by nlambda
+  # return(beta.array[1,,]) # beta.array[1,,] is matrix of dim n.test by nlambda each column returns the yhat.test corresponding to certain lambda
+  return(list(Yhat = beta.array[1,,], betahat = beta.array[-1,,]))
+}
+
+
+predict.penalized.origin.method.nolambda = function(X.train, Y.train, X.test, wrf.list, lam.id, alpha){
+  n.test = dim(X.test)[1]
+  p = dim(X.test)[2]
+  nlambda = 100
+  
+  #diff.mtx.list = diff.matrix(X.train, X.test)
+  diff.mtx.list = diff.matrix.simple(X.train, X.test)
+  #diff.mtx.list = diff.matrix.weight.standardize(X.train, X.test, wrf.list)
+  
+  beta = c()
+  betahat = list()
+  for (x in 1:n.test){
+    if(sd(Y.train[wrf.list[[x]]>1e-5])==0 | length(Y.train[wrf.list[[x]]>1e-5])<=10){
+      #print(1)
+      beta[x] = sum(Y.train*wrf.list[[x]])
+      betahat[[x]] = rep(0,p)
+    }
+    else{
+      #print(2)
+      lam_max = lambda.max(diff.mtx.list[[x]], Y.train, wrf.list[[x]], alpha)
+      lambda.vec = exp(seq(log(lam_max), log(lam_max*1e-3), length.out = nlambda))
+      fit = glmnet(x = diff.mtx.list[[x]], y = Y.train, weights = wrf.list[[x]], alpha = alpha, lambda = lambda.vec, standardize = F)
+      # print(lambda.vec[lam.id])
+      #print(as.matrix(coef(fit, s=lambda.vec))[1,])
+      beta.x = as.vector(coef(fit, s=lambda.vec[lam.id]))
+      beta[x] = beta.x[1]
+      betahat[[x]] = beta.x[-1]
+      }
+  }
+  # return(beta)
+  betahat = do.call(cbind, betahat) # p by n.test
+  return(list(Yhat = beta, betahat = betahat))
+}
 
 cv.penalized.origin.method = function(label, X, Y, lambda.vec, alpha, nfolds){
   # X = X.list[[1]]
@@ -450,53 +546,5 @@ cv.SlPen = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di, Db){
 }
 # ----------------------------------------------------------------------------------------------- #
 
-getlambda.vec = function(X.train, Y.train, X.test, wrf.list, alpha, local.feature.weight = matrix(1, nrow = nrow(X.test), ncol = ncol(X.test))){
-  n.test = dim(X.test)[1]
-  p = dim(X.test)[2]
-  diff.mtx.list = diff.matrix(X.train, X.test)
-  
-  lambda.list = list()
-  num = 0
-  for (i in 1:n.test){
-    if(sd(Y.train[wrf.list[[i]]!=0])!=0 & length(Y.train[wrf.list[[i]]!=0])>1) {
-      num = num+1
-      fit = glmnet(x = diff.mtx.list[[i]]%*%diag(local.feature.weight[i,]), y = Y.train, weights = wrf.list[[i]], alpha = alpha)
-      # print(fit)
-      lambda.list[[num]] = fit$lambda
-    }
-  }
-  lambda.mtx = do.call(cbind, lambda.list)
-  lambda.vec = apply(lambda.mtx, 1, mean)
-  # print(lambda.vec0)
-  # llam = length(lambda.vec0)
-  # lambda.vec = rev(2^(seq(log2(lambda.vec0[llam]), log2(lambda.vec0[1]), length.out = llam)))
-  # print(cbind(rev(2^(seq(log2(lambda.vec0[llam]), log2(lambda.vec0[1]), length.out = llam))), rev(exp(seq(log(lambda.vec0[llam]), log(lambda.vec0[1]), length.out = llam)))))
-  # print(log2(lambda.vec0[llam]))
-  # print(log(lambda.vec0[llam]))
-  # print(cbind(rev(2^(seq(log2(lambda.vec0[llam]), log2(lambda.vec0[1]), length.out = llam))), rev(exp(seq(log(lambda.vec0[llam]), log(lambda.vec0[1]), length.out = llam)))))
-  # print(rev(seq(lambda.vec0[llam], lambda.vec0[1], length.out = llam)))
-  return(list(lambda.list = lambda.list, lambda.mtx = lambda.mtx, lambda.vec = lambda.vec))
-}
-
-predict.penalized.origin.method = function(X.train, Y.train, X.test, wrf.list, lambda, alpha, local.feature.weight = matrix(1, nrow = nrow(X.test), ncol = ncol(X.test))){
-  n.test = dim(X.test)[1]
-  p = dim(X.test)[2]
-  diff.mtx.list = diff.matrix(X.train, X.test)
-
-  beta = c()
-  for (i in 1:n.test){
-    if(sd(Y.train[wrf.list[[i]]!=0])==0 | length(Y.train[wrf.list[[i]]!=0])<=1) {
-      beta[i] = mean(Y.train[wrf.list[[i]]!=0])
-    }
-    else{
-      fit = glmnet(x = diff.mtx.list[[i]]%*%diag(local.feature.weight[i,]), y = Y.train, weights = wrf.list[[i]], alpha = alpha)
-      # print(fit)
-      beta.i = as.vector(coef(fit, s=lambda))
-      # print(beta.i[1])
-      beta[i] = beta.i[1]
-    }
-  }
-  return(beta)
-}
 
 
