@@ -39,16 +39,13 @@ label.list = lapply(1:2, function(x) label[id[[x]]])
 # ----------------------------------- do scale ----------------------------------
 X1.mean = apply(X.list[[1]], 2, mean)
 X1.sd = apply(X.list[[1]], 2, sd)
-# if the std is really small just subtract the mean in the following step 
 X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
-X.list[[1]] = t(apply(X.list[[1]], 1, function(x) (x - X1.mean)/X1.sd))
-X.list[[2]] = t(apply(X.list[[2]], 1, function(x) (x - X1.mean)/X1.sd))
+X.list = lapply(X.list, function(X) sweep(sweep(X, 2, X1.mean), 2, X1.sd, "/"))
 print("Finish scaling features")
 # -------------------------------------------------------------------------------
 
 # ----------------------------- Calculating interaction term ------------------------------
 X.interaction.list = list()
-X.plus.inter.list = list()
 for (m in 1:2){
   X.interaction.list[[m]] = list()
   k = 0
@@ -61,44 +58,27 @@ for (m in 1:2){
     }
   }
   X.interaction.list[[m]] = do.call(cbind, X.interaction.list[[m]])
-<<<<<<< HEAD
-#  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
 }
-=======
-  X.plus.inter.list[[m]] = cbind(X.list[[m]], X.interaction.list[[m]])
-}
-
->>>>>>> 9b750fb0fb03e81cf7eacbb1a7fb8f6a91c03873
 X1.interaction.mean = apply(X.interaction.list[[1]], 2, mean)
 X1.interaction.sd = apply(X.interaction.list[[1]], 2, sd)
-# if the std is really small just subtract the mean in the following step 
 X1.interaction.sd = sapply(X1.interaction.sd, function(x) ifelse(x<1e-5, 1, x)) 
-X.interaction.list[[1]] = t(apply(X.interaction.list[[1]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
-X.interaction.list[[2]] = t(apply(X.interaction.list[[2]], 1, function(x) (x - X1.interaction.mean)/X1.interaction.sd))
+X.interaction.list = lapply(X.interaction.list, function(X) sweep(sweep(X, 2, X1.interaction.mean), 2, X1.interaction.sd, "/"))
 X.plus.inter.list = lapply(1:2, function(x) cbind(X.list[[x]], X.interaction.list[[x]]))
-
 
 # --- computing distance correlation to select favorite number of features including interaction features --- 
 # number of features to be selected
 p_dc = 200 
-
 cl = makeCluster(4) # number of cores you can use
 registerDoParallel(cl)
-
 dc.vec = foreach(col_ix = 1:ncol(X.plus.inter.list[[1]]), .packages = "energy", .combine = "c") %dopar% {
   dcor(Y.list[[1]], X.plus.inter.list[[1]][,col_ix])
 }
 stopCluster(cl)
-<<<<<<< HEAD
-# dc.vec = apply(X.plus.inter.list[[1]], 2, function(feature) dcor(Y.list[[1]], feature))
-=======
-
->>>>>>> 9b750fb0fb03e81cf7eacbb1a7fb8f6a91c03873
 print("Finish calculation distance correlation")
 
 X.selected.feature.id = order(dc.vec, decreasing = TRUE)[1:p_dc]
 X.selected.feature.list = lapply(1:2, function(ix) X.plus.inter.list[[ix]][, X.selected.feature.id])
-write.table(X.selected.feature.id, paste0("feature_id+", name.id, ".txt"), sep="\t", row.names = F, col.names = F, append = T)
+# write.table(X.selected.feature.id, paste0("feature_id+", name.id, ".txt"), sep="\t", row.names = F, col.names = F, append = T)
 print("Finish addig top interaction terms into design matrix")
 # -----------------------------------------------------------------------------------------------------------
 
@@ -114,11 +94,8 @@ nfolds.log = 5 # ordinal logistic: Sl
 nfolds.llr = 5 # local linear regression
 
 alpha0 = 0
-gamma.vec = exp(rev(seq(-2, 7, length.out = 50)))
-# initial point for optimization, first K-1 parameters are thetas, then the first coming p are coefficients the last p are slack variable
-initial.x = c(seq(-2, 2, length.out = length(levels(label.list[[1]]))-1), rep(0,p), rep(1,p))
+gamma.vec = exp(rev(seq(-4, 5, length.out = 50)))
 
-measure.type = "corr"
 if (alpha == 0){
   lambda.vec = c(1e6, exp(rev(seq(-2, 7, length.out = 99))))
 }else{
@@ -127,9 +104,11 @@ if (alpha == 0){
 # ----------------------------------------
 
 # ------------------------ ordinal logistic: Sl --------------------------
-ordinlog.list = cv.ordinlog.en(label.list[[1]], X.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
+# ordinlog.list = cv.ordinlog.en(label.list[[1]], X.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log, "corr")
+ordinlog.list = cv.ordinlog.logistic(label.list[[1]], X.list[[1]], Y.list[[1]], gamma.vec, alpha0, initial.x, nfolds.log)
+# fit = glmnet(x = X.list[[1]], y = label.list[[1]], family = "binomial", alpha = 0)
 ordin.ml = ordinlog.list$ordin.ml
-sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$w))
+sl.list = lapply(1:2, function(x) as.vector(X.list[[x]]%*%ordin.ml$beta))
 
 # delete outliers
 sl.list = lapply(1:2, function(ix){
@@ -140,15 +119,13 @@ sl.list = lapply(1:2, function(ix){
 
 # tuning parameter Di for SlRf
 Di.vec = seq(sd(sl.list[[1]])/5, sd(sl.list[[1]])*2, length.out = 20)
-
-
-paste0("sl_train+", name.id, ".txt")
-write.table(sl.list[[1]], paste0("sl_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
-write.table(sl.list[[2]], paste0("sl_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
-write.table(Y.list[[1]], paste0("Y_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
-write.table(Y.list[[2]], paste0("Y_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
-write.table(label.list[[1]], paste0("label_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
-write.table(label.list[[2]], paste0("label_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+# paste0("sl_train+", name.id, ".txt")
+# write.table(sl.list[[1]], paste0("sl_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+# write.table(sl.list[[2]], paste0("sl_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+# write.table(Y.list[[1]], paste0("Y_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+# write.table(Y.list[[2]], paste0("Y_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+# write.table(label.list[[1]], paste0("label_train+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
+# write.table(label.list[[2]], paste0("label_test+", name.id, ".txt"), sep="\t", append = T, row.names = F, col.names = F)
 print("Finish ordinal logistic regression")
 # ------------------------------------------------------------------------
 

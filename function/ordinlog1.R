@@ -282,3 +282,34 @@ cv.ordinlog.en = function(label, X, Y, lam.vec, alpha, initial.x, nfolds, measur
     return(list(measure.vec = corr.vec, measure.type = measure.type, lam = lam.max, ordin.ml= ordin.ml.best))
   }
 }
+
+cv.ordinlog.logistic = function(label, X, Y, lam.vec, alpha, initial.x, nfolds){
+  flds = createFolds(label, k = nfolds, list = TRUE, returnTrain = FALSE)
+  corr.list = list()
+  for (i in 1:nfolds){
+    X.train = X[unlist(flds[-i]), ]
+    X.val = X[unlist(flds[i]), ]
+    Y.train = Y[unlist(flds[-i])]
+    Y.val = Y[unlist(flds[i])]
+    label.train = label[unlist(flds[-i])]
+    label.val = label[unlist(flds[i])]
+    
+    fit = glmnet(x = X.train, y = label.train, family = "binomial", alpha = alpha, lambda = lam.vec)
+    Slhat.val.list = lapply(1:length(lam.vec), function(ix) apply(fit$beta, 2, function(w) X.val%*%w)[,ix])
+    
+    # new detect outliers and delete outliers
+    Slhat.extvalues.list = lapply(Slhat.val.list, function(sl) boxplot(sl, plot = F)$stats[c(1,5),1])
+    Slhat.val.list = lapply(1:length(Slhat.val.list), function(ix){
+      Slhat.val.list[[ix]][Slhat.val.list[[ix]] > Slhat.extvalues.list[[ix]][2]] = Slhat.extvalues.list[[ix]][2]
+      Slhat.val.list[[ix]][Slhat.val.list[[ix]] < Slhat.extvalues.list[[ix]][1]] = Slhat.extvalues.list[[ix]][1]
+      Slhat.val.list[[ix]]
+    })
+    corr.list[[i]] = as.vector(sapply(Slhat.val.list, function(Slhat) cor(Slhat, Y.val)))
+  }
+  corr.vec = apply(do.call(rbind, corr.list), 2, mean)
+  lam.max = lam.vec[which.min(abs(abs(corr.vec)-1))]
+  # ordin.ml.best = ordin.logistic.en(label, X, lam.max, alpha, initial.x)
+  ordin.ml.best = glmnet(x = X, y = label, family = "binomial", alpha = alpha, lambda = lam.max)
+  return(list(measure.vec = corr.vec, lam = lam.max, ordin.ml= ordin.ml.best))
+}
+
