@@ -6,6 +6,7 @@ library(randomForest)
 library(readr)
 library(energy)
 library(doParallel)
+library(gdata)
 
 load("/nas/longleaf/home/peiyao/LWPR/myseed1.RData")
 
@@ -28,22 +29,23 @@ for (i in 1:50){
     label0 = label0[id.cut2]
     
     # only select MRI+PET
-    Xs = X0[, 1:186]
+    X0 = X0[, 1:186]
     
     # within group median , each element from the list is the median within the group 
     # list of length 3, each element 1 by 186 group median of each feature
-    Xs.med.list = lapply(levels(label0), function(x) apply(Xs[label0 == x, ], 2, function(y) median(y, na.rm = T)))
+    X0.med.list = lapply(levels(label0), function(x) apply(X0[label0 == x, ], 2, function(y) median(y, na.rm = T)))
     
     # impute with median
-    Xs.missing = is.na(Xs)
-    for (j in 1:nrow(Xs)){
-      ip.med = Xs.med.list[[as.numeric(label0[j])]]
-      Xs[j, Xs.missing[j, ]] = ip.med[Xs.missing[j, ]]
+    X0.missing = is.na(X0)
+    for (i in 1:nrow(X0)){
+      ip.med = X0.med.list[[as.numeric(label0[i])]]
+      X0[i, X0.missing[i, ]] = ip.med[X0.missing[i, ]]
     }
     
-    X = Xs
-    Y = Y0
-    label = label0
+    # only select NC and MCI patients
+    X = X0[label0 < 4,]
+    Y = Y0[label0 < 4]
+    label = drop.levels(label0[label0 < 4])
     #print(X)
 
     # ---------------------- creating training and testing set ----------------------------- 
@@ -66,6 +68,7 @@ for (i in 1:50){
     # ----------------------------------- do scale ----------------------------------
     X1.mean = apply(X.list[[1]], 2, mean)
     X1.sd = apply(X.list[[1]], 2, sd)
+    X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
     
     X.list[[1]] = sweep(X.list[[1]], 2, X1.mean)
     X.list[[1]] = sweep(X.list[[1]], 2, X1.sd, "/")
@@ -96,6 +99,7 @@ for (i in 1:50){
     
     X1.interaction.mean = apply(X.interaction.list[[1]], 2, mean)
     X1.interaction.sd = apply(X.interaction.list[[1]], 2, sd)
+    X1.interaction.sd = sapply(X1.interaction.sd, function(x) ifelse(x<1e-5, 1, x)) 
     
     X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.mean)
     X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.sd, "/")
