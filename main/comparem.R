@@ -9,6 +9,7 @@ library(doParallel)
 library(gdata)
 
 load("/nas/longleaf/home/peiyao/LWPR/myseed1.RData")
+load("/Users/MonicaW/Documents/GitHub/LWPR/myseed1.Rdata")
 
 for (i in 1:50){
   for (t in 1:3){
@@ -37,9 +38,9 @@ for (i in 1:50){
     
     # impute with median
     X0.missing = is.na(X0)
-    for (i in 1:nrow(X0)){
-      ip.med = X0.med.list[[as.numeric(label0[i])]]
-      X0[i, X0.missing[i, ]] = ip.med[X0.missing[i, ]]
+    for (j in 1:nrow(X0)){
+      ip.med = X0.med.list[[as.numeric(label0[j])]]
+      X0[i, X0.missing[j, ]] = ip.med[X0.missing[j, ]]
     }
     
     # only select NC and MCI patients
