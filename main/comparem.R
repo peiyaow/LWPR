@@ -9,7 +9,7 @@ library(doParallel)
 library(gdata)
 
 load("/nas/longleaf/home/peiyao/LWPR/myseed1.RData")
-load("/Users/MonicaW/Documents/GitHub/LWPR/myseed1.Rdata")
+# load("/Users/MonicaW/Documents/GitHub/LWPR/myseed1.Rdata")
 
 for (i in 1:50){
   for (t in 1:3){
@@ -40,7 +40,7 @@ for (i in 1:50){
     X0.missing = is.na(X0)
     for (j in 1:nrow(X0)){
       ip.med = X0.med.list[[as.numeric(label0[j])]]
-      X0[i, X0.missing[j, ]] = ip.med[X0.missing[j, ]]
+      X0[j, X0.missing[j, ]] = ip.med[X0.missing[j, ]]
     }
     
     # only select NC and MCI patients
@@ -70,13 +70,15 @@ for (i in 1:50){
     X1.mean = apply(X.list[[1]], 2, mean)
     X1.sd = apply(X.list[[1]], 2, sd)
     X1.sd = sapply(X1.sd, function(x) ifelse(x<1e-5, 1, x)) 
-    
-    X.list[[1]] = sweep(X.list[[1]], 2, X1.mean)
-    X.list[[1]] = sweep(X.list[[1]], 2, X1.sd, "/")
-    
-    X.list[[2]] = sweep(X.list[[2]], 2, X1.mean)
-    X.list[[2]] = sweep(X.list[[2]], 2, X1.sd, "/")
+    X.list = lapply(X.list, function(X) sweep(sweep(X, 2, X1.mean), 2, X1.sd, "/"))
     print("Finish scaling features")
+    
+    # X.list[[1]] = sweep(X.list[[1]], 2, X1.mean)
+    # X.list[[1]] = sweep(X.list[[1]], 2, X1.sd, "/")
+    # 
+    # X.list[[2]] = sweep(X.list[[2]], 2, X1.mean)
+    # X.list[[2]] = sweep(X.list[[2]], 2, X1.sd, "/")
+    # print("Finish scaling features")
     #print(X.list)
     # -------------------------------------------------------------------------------
     
@@ -101,12 +103,12 @@ for (i in 1:50){
     X1.interaction.mean = apply(X.interaction.list[[1]], 2, mean)
     X1.interaction.sd = apply(X.interaction.list[[1]], 2, sd)
     X1.interaction.sd = sapply(X1.interaction.sd, function(x) ifelse(x<1e-5, 1, x)) 
-    
-    X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.mean)
-    X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.sd, "/")
-    
-    X.interaction.list[[2]] = sweep(X.interaction.list[[2]], 2, X1.interaction.mean)
-    X.interaction.list[[2]] = sweep(X.interaction.list[[2]], 2, X1.interaction.sd, "/")
+    # X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.mean)
+    # X.interaction.list[[1]] = sweep(X.interaction.list[[1]], 2, X1.interaction.sd, "/")
+    # 
+    # X.interaction.list[[2]] = sweep(X.interaction.list[[2]], 2, X1.interaction.mean)
+    # X.interaction.list[[2]] = sweep(X.interaction.list[[2]], 2, X1.interaction.sd, "/")
+    X.interaction.list = lapply(X.interaction.list, function(X) sweep(sweep(X, 2, X1.interaction.mean), 2, X1.interaction.sd, "/"))
     X.plus.inter.list = lapply(1:2, function(x) cbind(X.list[[x]], X.interaction.list[[x]]))
     
     # --- computing distance correlation to select favorite number of features including interaction features --- 
