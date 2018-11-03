@@ -180,7 +180,6 @@ cv.rfguided.slnp.noDb = function(label, X, Y, Sl, Di.vec, nfolds){
 
 cv.SlRfPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){ 
   flds = createFolds(label, k = nfolds, list = TRUE, returnTrain = FALSE)
-  
   llam = length(lambda.vec)
   lDi = length(Di.vec)
   
@@ -285,44 +284,44 @@ cv.bothPen.noDb = function(label, X, Y, lambda.vec, alpha, nfolds, sl, Di.vec){
     # set.seed(1010)
     ml.rf = randomForest(x = X.train, y = Y.train, keep.inbag = T, ntree = 100)
     wrf.list = rf.weight(ml.rf, X.train, X.val)
-    #mse.Rf.list[[k]] = list()
-    #mse.noRf.list[[k]] = list()
+    mse.Rf.list[[k]] = list()
+    mse.noRf.list[[k]] = list()
     
-    mae.Rf.list[[k]] = list()
-    mae.noRf.list[[k]] = list()
+    # mae.Rf.list[[k]] = list()
+    # mae.noRf.list[[k]] = list()
     for (i in 1:lDi){
       # compute new weights
       newweight.list = SlRf.weight.noDb(wrf.list, Y.train, sl.train, sl.val, Di.vec[i])$w.list
       Yhat.mtx = penalized.origin.method(X.train, Y.train, X.val, newweight.list, lambda.vec, alpha)$Yhat
-      # mse.Rf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(x^2))
-      mae.Rf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(abs(x)))
+      mse.Rf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(x^2))
+      # mae.Rf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(abs(x)))
       
       newweight.list = slnp.noDb(X.train, Y.train, sl.train, X.val, Y.val, sl.val, Di.vec[i])$w.list
       Yhat.mtx = penalized.origin.method(X.train, Y.train, X.val, newweight.list, lambda.vec, alpha)$Yhat
-      # mse.noRf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(x^2))
-      mae.noRf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(abs(x)))
+      mse.noRf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(x^2))
+      # mae.noRf.list[[k]][[i]] = apply(Yhat.mtx - Y.val, 2, function(x) mean(abs(x)))
     }
-    # mse.Rf.list[[k]] = do.call(rbind, mse.Rf.list[[k]])
-    # mse.noRf.list[[k]] = do.call(rbind, mse.noRf.list[[k]])
-    mae.Rf.list[[k]] = do.call(rbind, mae.Rf.list[[k]])
-    mae.noRf.list[[k]] = do.call(rbind, mae.noRf.list[[k]])
+    mse.Rf.list[[k]] = do.call(rbind, mse.Rf.list[[k]])
+    mse.noRf.list[[k]] = do.call(rbind, mse.noRf.list[[k]])
+    # mae.Rf.list[[k]] = do.call(rbind, mae.Rf.list[[k]])
+    # mae.noRf.list[[k]] = do.call(rbind, mae.noRf.list[[k]])
   }
   
-  # mse.Rf.array = array(unlist(mse.Rf.list), dim = c(lDi, llam, nfolds))
-  # measure.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) mean(x, na.rm = T))
-  # sd.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) sd(x, na.rm = T))
+  mse.Rf.array = array(unlist(mse.Rf.list), dim = c(lDi, llam, nfolds))
+  measure.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) mean(x, na.rm = T))
+  sd.Rf.mtx = apply(mse.Rf.array, c(1,2), function(x) sd(x, na.rm = T))
+
+  mse.noRf.array = array(unlist(mse.noRf.list), dim = c(lDi, llam, nfolds))
+  measure.noRf.mtx = apply(mse.noRf.array, c(1,2), mean)
+  sd.noRf.mtx = apply(mse.noRf.array, c(1,2), function(x) sd(x, na.rm = T))
+  
+  # mae.Rf.array = array(unlist(mae.Rf.list), dim = c(lDi, llam, nfolds))
+  # measure.Rf.mtx = apply(mae.Rf.array, c(1,2), function(x) mean(x, na.rm = T))
+  # sd.Rf.mtx = apply(mae.Rf.array, c(1,2), function(x) sd(x, na.rm = T))
   # 
-  # mse.noRf.array = array(unlist(mse.noRf.list), dim = c(lDi, llam, nfolds))
-  # measure.noRf.mtx = apply(mse.noRf.array, c(1,2), mean)
-  # sd.noRf.mtx = apply(mse.noRf.array, c(1,2), function(x) sd(x, na.rm = T))
-  
-  mae.Rf.array = array(unlist(mae.Rf.list), dim = c(lDi, llam, nfolds))
-  measure.Rf.mtx = apply(mae.Rf.array, c(1,2), function(x) mean(x, na.rm = T))
-  sd.Rf.mtx = apply(mae.Rf.array, c(1,2), function(x) sd(x, na.rm = T))
-  
-  mae.noRf.array = array(unlist(mae.noRf.list), dim = c(lDi, llam, nfolds))
-  measure.noRf.mtx = apply(mae.noRf.array, c(1,2), mean)
-  sd.noRf.mtx = apply(mae.noRf.array, c(1,2), function(x) sd(x, na.rm = T))
+  # mae.noRf.array = array(unlist(mae.noRf.list), dim = c(lDi, llam, nfolds))
+  # measure.noRf.mtx = apply(mae.noRf.array, c(1,2), mean)
+  # sd.noRf.mtx = apply(mae.noRf.array, c(1,2), function(x) sd(x, na.rm = T))
   
   id.which = which.min(c(min(measure.Rf.mtx), min(measure.noRf.mtx))) # 1 stands for Rf 2 stands for noRf
   if (id.which == 1){

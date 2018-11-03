@@ -130,20 +130,29 @@ print("Finish ordinal logistic regression")
 # ------------------------------------------------------------------------
 
 # ----------------------------- SlRf LWPR --------------------------------- 
-par.list = cv.bothPen.noDb(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
+# par.list = cv.bothPen.noDb(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
+# Di.selected = par.list$Di
+# lambda.selected = par.list$lambda
+# id.which = par.list$id.which
 
+par.list = cv.SlRfPen.noDb(label.list[[1]], X.selected.feature.list[[1]], Y.list[[1]], lambda.vec, alpha, nfolds.llr, sl.list[[1]], Di.vec)
 Di.selected = par.list$Di
 lambda.selected = par.list$lambda
-id.which = par.list$id.which
+# id.which = par.list$id.which
 print("Finish SlRf cross validation")
 
-if(id.which == 1){
-  ml.rf = randomForest(x = X.selected.feature.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
-  wrf.list = rf.weight(ml.rf, X.selected.feature.list[[1]], X.selected.feature.list[[2]])
-  mymethod.res = SlRf.weight.noDb(wrf.list, Y.list[[1]], sl.list[[1]], sl.list[[2]], Di.selected)
-}else{
-  mymethod.res = slnp.noDb(X.selected.feature.list[[1]], Y.list[[1]], sl.list[[1]], X.selected.feature.list[[2]], Y.list[[2]], sl.list[[2]], Di.selected)
-}
+# if(id.which == 1){
+#   ml.rf = randomForest(x = X.selected.feature.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
+#   wrf.list = rf.weight(ml.rf, X.selected.feature.list[[1]], X.selected.feature.list[[2]])
+#   mymethod.res = SlRf.weight.noDb(wrf.list, Y.list[[1]], sl.list[[1]], sl.list[[2]], Di.selected)
+# }else{
+#   mymethod.res = slnp.noDb(X.selected.feature.list[[1]], Y.list[[1]], sl.list[[1]], X.selected.feature.list[[2]], Y.list[[2]], sl.list[[2]], Di.selected)
+# }
+
+ml.rf = randomForest(x = X.selected.feature.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
+wrf.list = rf.weight(ml.rf, X.selected.feature.list[[1]], X.selected.feature.list[[2]])
+mymethod.res = SlRf.weight.noDb(wrf.list, Y.list[[1]], sl.list[[1]], sl.list[[2]], Di.selected)
+
 print("Finish local fitting without penalization")
 
 Yhat.mymethod = mymethod.res$Yhat
