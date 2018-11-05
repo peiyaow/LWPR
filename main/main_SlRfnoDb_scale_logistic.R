@@ -152,7 +152,6 @@ print("Finish SlRf cross validation")
 ml.rf = randomForest(x = X.selected.feature.list[[1]], y = Y.list[[1]], keep.inbag = T, ntree = 100)
 wrf.list = rf.weight(ml.rf, X.selected.feature.list[[1]], X.selected.feature.list[[2]])
 mymethod.res = SlRf.weight.noDb(wrf.list, Y.list[[1]], sl.list[[1]], sl.list[[2]], Di.selected)
-
 print("Finish local fitting without penalization")
 
 Yhat.mymethod = mymethod.res$Yhat

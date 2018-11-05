@@ -41,10 +41,14 @@ for (i in 1:nrow(X0)){
   X0[i, X0.missing[i, ]] = ip.med[X0.missing[i, ]]
 }
 
-# only select NC and MCI patients
-X = X0[label0 < 4,]
-Y = Y0[label0 < 4]
-label = drop.levels(label0[label0 < 4])
+# # only select NC and MCI patients
+# X = X0[label0 < 4,]
+# Y = Y0[label0 < 4]
+# label = drop.levels(label0[label0 < 4])
 
+# all NC and MCI and AD
+X = X0
+Y = Y0
+label = label0
 
 
